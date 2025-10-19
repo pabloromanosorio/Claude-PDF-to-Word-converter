@@ -1,0 +1,521 @@
+# UNIVERSAL PDF TO WORD CONVERSION PROMPT (ENHANCED APP VERSION)
+
+## Complete Prompt:
+
+"Convert the attached PDF document to a properly formatted Word (.docx) file. Extract all content accurately and preserve document structure with professional formatting.
+
+---
+
+## ⚠️ CRITICAL MODIFICATIONS FOR THIS APP
+
+### MUST FOLLOW THESE RULES:
+
+1. **IGNORE Headers and Footers:**
+   - DO NOT include any header or footer content from the PDF in the output DOCX
+   - Skip page numbers, document titles, or any repeated text at top/bottom of pages
+   - Only extract main document body content
+
+2. **ALL TEXT MUST BE BLACK:**
+   - Every TextRun MUST have `color: "000000"`
+   - NO colored text anywhere in the document
+   - Exception: Table header backgrounds may be gray (E7E6E6), but text is still black
+
+3. **Replace Handwritten Signatures:**
+   - Any handwritten signature graphics or scanned signature images → replace with text `[Signature]`
+   - Use regular TextRun with text "[Signature]"
+   - Do NOT include the actual signature image
+
+4. **Add Page Markers:**
+   - At the start of each page (EXCEPT page 1), add: `[Page X of the original]`
+   - Format as regular paragraph before page content
+   - Page 1 = NO marker
+   - Page 2 = `[Page 2 of the original]`
+   - Page 3 = `[Page 3 of the original]`, etc.
+
+5. **NO Extra Elements:**
+   - NO explanatory text from you
+   - NO metadata in DOCX properties
+   - NO comments or annotations from you
+   - ONLY the document content as described
+
+6. **Reproduce ONLY:**
+   - Text size (match original as closely as possible)
+   - Text format (bold, italic, underline - but ALL black)
+   - Document structure (paragraphs, tables, lists)
+   - Nothing else
+
+---
+
+## CRITICAL: UNIVERSAL TABLE RECOGNITION
+
+### Table Detection Rules (Pattern-Based):
+
+**A section should be converted to a TABLE if it exhibits ANY of these patterns:**
+
+1. **Structural Patterns:**
+   - Content organized in consistent rows with 2+ columns
+   - Vertical alignment of data across multiple rows
+   - Repeated data structure (same fields/categories repeating)
+   - Horizontal rules, borders, or visual separators between sections
+   - Grid-like visual layout
+
+2. **Content Patterns:**
+   - Header row followed by multiple data rows with same structure
+   - Data that can be categorized into distinct fields/attributes
+   - Parallel information (same type of info repeated for different items)
+   - Comparison data (multiple entities with same attributes)
+   - Quantitative data with labels and values in columns
+
+3. **Spacing/Alignment Indicators:**
+   - Consistent column-like spacing using tabs or alignment
+   - Multiple items with values aligned at same horizontal positions
+   - Visual columns created by whitespace
+   - Monospaced text used to create column alignment
+
+4. **Semantic Indicators:**
+   - List of items with multiple attributes each
+   - Data that answers "what, when, where, how much" repeatedly
+   - Catalog or inventory-style content
+   - Comparative information across categories
+   - Aggregated or summarized data with totals/subtotals
+
+### Decision Framework:
+
+**ASK THESE QUESTIONS:**
+
+1. **Column Test:** Does this content have 2+ distinct columns of information?
+   - YES → Likely a table
+   - NO → Continue to next test
+
+2. **Repetition Test:** Does the same structure repeat for multiple items/rows?
+   - YES → Likely a table
+   - NO → Continue to next test
+
+3. **Attribute Test:** Are multiple attributes being shown for each entity/item?
+   - YES → Likely a table
+   - NO → Continue to next test
+
+4. **Comparison Test:** Is this comparing or listing similar items side-by-side?
+   - YES → Likely a table
+   - NO → Likely plain text
+
+5. **Alignment Test:** Is vertical alignment critical to understanding the data?
+   - YES → Definitely a table
+   - NO → Could be plain text
+
+**IF 2+ TESTS ANSWER "YES" → CREATE A TABLE**
+
+### Table vs. Plain Text Guidelines:
+
+**CREATE AS TABLE when:**
+- Information is in a grid/matrix format
+- Column headers exist (explicitly or implicitly)
+- Same categories repeat for different rows
+- Alignment reveals relationships between data
+- Content would lose meaning if column alignment were removed
+- Data is structured for scanning/comparison
+
+**KEEP AS PLAIN TEXT when:**
+- Content flows narratively
+- Information is hierarchical but not columnar (like addresses)
+- Single-dimension lists (simple bullets/numbers)
+- Paragraphs or prose
+- Content is sequential rather than parallel
+
+### Universal Table Structure Requirements:
+
+**For ANY table you create:**
+
+1. **Header Row:**
+   - Identify or infer column names from content
+   - Bold text, gray background (E7E6E6), **BLACK TEXT** (000000)
+   - First row of table
+
+2. **Data Rows:**
+   - One entity/item per row
+   - Consistent number of columns per row
+   - Cell content matches column purpose
+   - **ALL TEXT BLACK** (000000)
+
+3. **Formatting:**
+   - Thin borders (1pt, gray or black)
+   - Consistent cell padding (50-180 DXA)
+   - Appropriate column widths based on content length
+   - Text alignment: left for text, right for numbers, center for headers
+
+4. **Column Width Calculation:**
+   - Total available width: ~9360 DXA (letter size with 1" margins)
+   - Distribute based on content: wider for long text, narrower for codes/numbers
+   - Example 3-column table: [3120, 3120, 3120]
+   - Example 5-column table: [2000, 2000, 2000, 1500, 1860]
+   - Adjust proportionally based on actual content needs
+
+---
+
+## TEXT EXTRACTION & PRESERVATION
+
+### Content Extraction:
+
+1. **Preserve all text exactly:**
+   - Maintain original wording, spelling, capitalization
+   - Keep numbers, dates, codes as shown
+   - Preserve special characters and symbols
+   - **BUT: Make ALL text black (color: "000000")**
+
+2. **Maintain document structure:**
+   - Page breaks between pages
+   - Section divisions
+   - **IGNORE headers and footers**
+   - Footnotes and annotations (if in main body)
+
+3. **Formatting preservation:**
+   - **Bold**, *italic*, underline from original
+   - Font sizes (match original)
+   - **CRITICAL: ALL text color = "000000" (black)**
+   - Text alignment (left, center, right, justified)
+   - Indentation and spacing
+   - Line breaks and paragraph structure
+
+### Document Elements:
+
+**Identify and recreate:**
+- Titles (largest text, centered/prominent) - **BLACK TEXT**
+- Headings (hierarchical levels H1, H2, H3) - **BLACK TEXT**
+- Body text (normal paragraphs) - **BLACK TEXT**
+- Lists (bulleted or numbered) - **BLACK TEXT**
+- Tables (per rules above) - **BLACK TEXT in all cells**
+- Images: **Replace signatures with [Signature]**, include other images if present
+- **IGNORE page numbers and headers/footers**
+- Forms and structured sections
+
+---
+
+## IMPLEMENTATION WORKFLOW
+
+### Step-by-Step Process:
+
+1. **Initial Scan:**
+   - Read entire PDF content
+   - Identify page breaks and major sections
+   - **Mark headers/footers to SKIP**
+   - Note document type and purpose
+
+2. **Content Classification:**
+   - Separate text, tables, images, forms
+   - **Filter out headers and footers**
+   - Identify titles (not from headers)
+   - Note formatting styles (bold, italic, sizes)
+   - **Find handwritten signatures to replace**
+
+3. **Table Detection:**
+   - Apply Table Detection Rules to each section
+   - Use Decision Framework for ambiguous content
+   - Mark sections to be converted as tables
+
+4. **Read Documentation:**
+   - Review skills/pdf/SKILL.md (PDF extraction)
+   - Review skills/docx/SKILL.md (Word creation)
+   - Review skills/docx/docx-js.md (detailed docx syntax)
+
+5. **Build Structure:**
+   - Create document outline (sections, pages)
+   - Define styles for titles, headings, body text
+   - Plan table structures with column counts/widths
+   - **Ensure all styles have color: "000000"**
+
+6. **Implement Page Markers:**
+   - For page 2 and onwards, start with paragraph containing `[Page X of the original]`
+   - Example for page 2:
+   ```javascript
+   new Paragraph({
+     children: [new TextRun({ text: "[Page 2 of the original]", color: "000000" })],
+     spacing: { after: 240 }
+   })
+   ```
+
+7. **Implement Tables:**
+   - For each table section:
+     * Determine column count and headers
+     * Calculate appropriate column widths
+     * Create Table object with proper formatting
+     * Add header row with styling (gray background, **black text**)
+     * Add data rows preserving content (**all black text**)
+
+8. **Implement Text:**
+   - Create paragraphs with proper formatting
+   - Apply styles (bold, italic, alignment)
+   - **ALWAYS set color: "000000" on every TextRun**
+   - Add spacing before/after elements
+   - Insert page breaks where needed
+   - **Replace any signature images with [Signature] text**
+
+9. **Quality Check:**
+   - Verify all content extracted (except headers/footers)
+   - Check table structures are correct
+   - **Confirm ALL text is black**
+   - **Confirm page markers on pages 2+**
+   - **Confirm signatures replaced with [Signature]**
+   - Ensure professional appearance
+
+10. **Export:**
+    - Save with NO metadata in Document properties
+    - Verify file is valid .docx format
+
+---
+
+## CODE IMPLEMENTATION REQUIREMENTS
+
+### Required Imports (docx-js):
+```javascript
+const fs = require('fs');
+const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+        AlignmentType, BorderStyle, WidthType, ShadingType, HeadingLevel,
+        UnderlineType, PageBreak } = require('docx');
+```
+
+### Document Template with NO METADATA:
+```javascript
+const doc = new Document({
+  // CRITICAL: Empty metadata - no traces
+  creator: "",
+  description: "",
+  title: "",
+  subject: "",
+  keywords: "",
+  lastModifiedBy: "",
+  revision: "",
+  
+  // Default styles - BLACK TEXT ONLY
+  styles: {
+    default: {
+      document: {
+        run: {
+          font: "Arial",
+          size: 22, // 11pt default
+          color: "000000" // ← BLACK ALWAYS
+        }
+      }
+    }
+  },
+  
+  sections: [{
+    properties: {
+      page: {
+        margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 }
+      }
+    },
+    children: [
+      // Page 1 content - NO page marker
+      // ... content ...
+      
+      new Paragraph({ children: [new PageBreak()] }),
+      
+      // Page 2 - START with page marker
+      new Paragraph({
+        children: [new TextRun({ text: "[Page 2 of the original]", color: "000000" })],
+        spacing: { after: 240 }
+      }),
+      // ... page 2 content ...
+      
+      // etc.
+    ]
+  }]
+});
+```
+
+### Table Template (Universal) - BLACK TEXT:
+```javascript
+// Define borders once
+const tableBorder = { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" };
+const cellBorders = { top: tableBorder, bottom: tableBorder, left: tableBorder, right: tableBorder };
+
+// Create table with N columns
+new Table({
+  columnWidths: [col1_width, col2_width, ..., colN_width],
+  margins: { top: 50, bottom: 50, left: 100, right: 100 },
+  rows: [
+    // Header row - GRAY background, BLACK text
+    new TableRow({
+      tableHeader: true,
+      children: [
+        new TableCell({
+          borders: cellBorders,
+          shading: { fill: "E7E6E6", type: ShadingType.CLEAR },
+          children: [new Paragraph({ 
+            children: [new TextRun({ 
+              text: "Column Header", 
+              bold: true, 
+              size: 20,
+              color: "000000" // ← BLACK
+            })] 
+          })]
+        }),
+        // ... repeat for each column
+      ]
+    }),
+    // Data rows - BLACK text
+    new TableRow({
+      children: [
+        new TableCell({
+          borders: cellBorders,
+          children: [new Paragraph({ 
+            children: [new TextRun({ 
+              text: "Cell Data",
+              color: "000000" // ← BLACK
+            })] 
+          })]
+        }),
+        // ... repeat for each column
+      ]
+    }),
+    // ... repeat for each row
+  ]
+})
+```
+
+### Text Paragraph Template - BLACK TEXT:
+```javascript
+new Paragraph({
+  alignment: AlignmentType.LEFT,
+  spacing: { before: 120, after: 120 },
+  indent: { left: 0, right: 0 },
+  children: [
+    new TextRun({ 
+      text: "Content here",
+      bold: false,
+      italics: false,
+      size: 22, // 11pt
+      color: "000000" // ← ALWAYS BLACK
+    })
+  ]
+})
+```
+
+### Signature Replacement:
+```javascript
+// When you encounter a signature image, replace with:
+new Paragraph({
+  children: [new TextRun({ 
+    text: "[Signature]",
+    color: "000000"
+  })]
+})
+```
+
+---
+
+## VERIFICATION CHECKLIST
+
+Before finalizing, confirm:
+
+**Critical Requirements:**
+- ✓ **NO headers or footers from PDF included**
+- ✓ **ALL text is black (color: "000000")**
+- ✓ **Page markers on pages 2+ ([Page X of the original])**
+- ✓ **Page 1 has NO page marker**
+- ✓ **Signatures replaced with [Signature]**
+- ✓ **NO metadata in document properties**
+- ✓ **NO extra explanatory text**
+
+**Content:**
+- ✓ All body text from PDF is present
+- ✓ No content was skipped (except headers/footers)
+- ✓ Numbers, dates, codes are accurate
+- ✓ Special characters preserved
+
+**Tables:**
+- ✓ All columnar/grid data is in tables
+- ✓ Every table has a header row (gray background, black text)
+- ✓ Column counts consistent within each table
+- ✓ Borders present and uniform
+- ✓ **All table text is black**
+
+**Formatting:**
+- ✓ Bold, italic, underline preserved
+- ✓ Font sizes match original
+- ✓ **ALL text color is 000000 (black)**
+- ✓ Text alignment matches original
+- ✓ Page breaks in correct locations
+
+**Technical:**
+- ✓ File saved correctly
+- ✓ .docx file opens in Word
+- ✓ No corrupted elements
+- ✓ Professional appearance
+
+---
+
+## COMMON MISTAKES TO AVOID
+
+### Critical Errors:
+❌ **WRONG:** Including headers/footers from PDF
+❌ **WRONG:** Using colored text (any color other than 000000)
+❌ **WRONG:** Forgetting page markers on pages 2+
+❌ **WRONG:** Adding page marker to page 1
+❌ **WRONG:** Including actual signature images
+❌ **WRONG:** Adding explanatory text or metadata
+❌ **WRONG:** Including any non-black text
+
+### Table-Related Errors:
+❌ **WRONG:** Converting tabular data to paragraphs
+❌ **WRONG:** Missing header rows
+❌ **WRONG:** Inconsistent column counts
+❌ **WRONG:** Colored text in tables
+
+### General Errors:
+❌ Using \n for line breaks
+❌ Missing required parameters
+❌ Forgetting to wrap PageBreak in Paragraph
+❌ Using plain text directly in Paragraph
+
+---
+
+## FINAL CODE OUTPUT
+
+Your generated code should:
+
+1. ✅ Save to the specified output path
+2. ✅ Use only docx library (already installed)
+3. ✅ Include ALL necessary imports
+4. ✅ Handle file I/O properly
+5. ✅ Be completely executable with Node.js
+6. ✅ Print "SUCCESS: [filename]" when complete
+7. ✅ Include error handling
+
+Example final code structure:
+```javascript
+const fs = require('fs');
+const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+        AlignmentType, BorderStyle, WidthType, ShadingType, PageBreak } = require('docx');
+
+// Create document with NO metadata
+const doc = new Document({
+  creator: "",
+  description: "",
+  title: "",
+  // ... your complete document structure
+});
+
+// Save file
+Packer.toBuffer(doc).then(buffer => {
+  fs.writeFileSync('/path/to/output.docx', buffer);
+  console.log('SUCCESS: output.docx');
+}).catch(err => {
+  console.error('ERROR:', err.message);
+  process.exit(1);
+});
+```
+
+---
+
+## SUMMARY
+
+**This enhanced prompt provides:**
+1. ✓ Clear critical modifications (black text, page markers, no headers/footers)
+2. ✓ Universal table detection (pattern-based)
+3. ✓ Complete implementation workflow
+4. ✓ Code templates with proper formatting
+5. ✓ Comprehensive verification checklist
+6. ✓ Error prevention guidance
+
+**Follow ALL requirements exactly for consistent, high-quality results.**

@@ -1,0 +1,49 @@
+{
+  "name": "claude-pdf-to-word-converter",
+  "version": "1.0.0",
+  "description": "Professional PDF to Word converter using Claude AI",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "keywords": ["pdf", "word", "converter", "claude", "ai"],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
+    "docx": "^8.5.0",
+    "electron-store": "^8.1.0",
+    "pdf-parse": "^1.1.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.yourcompany.pdf-converter",
+    "productName": "Claude PDF to Word",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "converter.js",
+      "src/**/*",
+      "skills/**/*",
+      "prompts/**/*",
+      "node_modules/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.png"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.png"
+    }
+  }
+}
