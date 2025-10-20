@@ -139,7 +139,20 @@ You'll add credits to your Anthropic account first.
 Double-click `START_APP.bat` → App opens → Convert files
 
 ### Mac:
-Double-click `START_APP.command` → App opens → Convert files
+**Option 1 (Recommended):** Use Terminal
+1. Open Terminal (Command + Space, type "terminal")
+2. Navigate to app folder: `cd /path/to/pdf-converter-app`
+3. Run: `npm start`
+
+**Option 2:** Try START_APP.command
+1. Double-click `START_APP.command`
+2. If it doesn't work, use Option 1 instead
+
+**Backup Method (Always Works):**
+```bash
+cd /path/to/pdf-converter-app
+npm start
+```
 
 **No internet browser needed** - it's a standalone desktop app!
 
@@ -204,15 +217,26 @@ Double-click `START_APP.command` → App opens → Convert files
 → Go back to Step 1 and install Node.js
 
 ### "API key test failed"
-→ Check that you copied the entire key (starts with "sk-ant-...")  
+→ Check that you copied the entire key (starts with "sk-ant-...")
 → Make sure you have credits in your Anthropic account
 
 ### "Failed to install dependencies"
-→ Check your internet connection  
+→ Check your internet connection
 → Try closing the app and running START_APP again
 
-### App window doesn't open
-→ Check the black/terminal window for error messages  
+### App window doesn't open (Mac)
+→ **If START_APP.command fails:** This is a known issue with some Mac configurations
+→ **Solution:** Use Terminal instead:
+  1. Open Terminal (Command + Space, type "terminal", press Enter)
+  2. Type: `cd ` (with a space after cd)
+  3. Drag the app folder into Terminal window
+  4. Press Enter
+  5. Type: `npm start`
+  6. Press Enter
+→ The app will open! Use this method every time.
+
+### App window doesn't open (Windows)
+→ Check the black/terminal window for error messages
 → Make sure Node.js is installed correctly
 
 ### Conversion takes a long time
