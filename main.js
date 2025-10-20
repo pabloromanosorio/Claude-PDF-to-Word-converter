@@ -12,7 +12,7 @@ const DEFAULT_SETTINGS = {
   font: 'Arial',
   fontSize: 11,
   margins: {
-    top: 1440,
+    top: 1440,    // in DXA (1440 DXA = 1 inch)
     right: 1440,
     bottom: 1440,
     left: 1440
@@ -20,6 +20,11 @@ const DEFAULT_SETTINGS = {
   specialRequests: {
     replaceSignatures: true,
     addPageMarkers: true
+  },
+  promptMode: 'simple',  // 'advanced' | 'simple' | 'custom'
+  pageSelection: {
+    mode: 'all',         // 'all' | 'range'
+    range: ''            // e.g., "1-5, 7, 9-12"
   }
 };
 
@@ -38,7 +43,7 @@ function createWindow() {
   mainWindow.loadFile('src/index.html');
 
   // Development: Uncomment to show dev tools
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
 }
 
 app.whenReady().then(createWindow);
@@ -53,9 +58,31 @@ app.on('activate', () => {
 
 // IPC Handlers
 
-// Get settings
+// Get settings (with migration for old settings)
 ipcMain.handle('get-settings', async () => {
-  const settings = store.get('settings', DEFAULT_SETTINGS);
+  let settings = store.get('settings', DEFAULT_SETTINGS);
+
+  // Migrate old settings to new structure
+  if (!settings.promptMode) {
+    settings.promptMode = 'simple';
+  }
+  if (!settings.pageSelection) {
+    settings.pageSelection = { mode: 'all', range: '' };
+  }
+  if (!settings.margins.right) {
+    // Old settings had single margin value, migrate to individual margins
+    const margin = settings.margins.top || 1440;
+    settings.margins = {
+      top: margin,
+      right: margin,
+      bottom: margin,
+      left: margin
+    };
+  }
+
+  // Save migrated settings
+  store.set('settings', settings);
+
   return settings;
 });
 
@@ -106,10 +133,12 @@ ipcMain.handle('select-files', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile', 'multiSelections'],
     filters: [
-      { name: 'Documents', extensions: ['pdf', 'jpg', 'jpeg', 'png'] }
+      { name: 'All Supported Files', extensions: ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp'] },
+      { name: 'PDF Documents', extensions: ['pdf'] },
+      { name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'tiff', 'webp'] }
     ]
   });
-  
+
   if (!result.canceled) {
     return result.filePaths;
   }
@@ -129,11 +158,12 @@ ipcMain.handle('convert-files', async (event, filePaths, settings) => {
   
   const converter = require('./converter');
   const results = [];
-  
+  let totalCost = 0;
+
   for (let i = 0; i < filePaths.length; i++) {
     const filePath = filePaths[i];
     const fileName = path.basename(filePath, path.extname(filePath));
-    
+
     try {
       // Send progress update
       mainWindow.webContents.send('conversion-progress', {
@@ -141,21 +171,28 @@ ipcMain.handle('convert-files', async (event, filePaths, settings) => {
         totalFiles: filePaths.length,
         fileName: path.basename(filePath),
         status: 'processing',
-        progress: (i / filePaths.length) * 100
+        progress: (i / filePaths.length) * 100,
+        cost: totalCost
       });
-      
+
       // Convert file
       const result = await converter.convertFile(filePath, fileName, settings, apiKey, (progress) => {
         mainWindow.webContents.send('conversion-progress', {
           fileIndex: i,
           totalFiles: filePaths.length,
           fileName: path.basename(filePath),
+          cost: totalCost + (progress.cost || 0),
           ...progress
         });
       });
-      
+
       results.push(result);
-      
+
+      // Accumulate cost
+      if (result.cost) {
+        totalCost += result.cost;
+      }
+
     } catch (error) {
       results.push({
         success: false,
@@ -164,20 +201,74 @@ ipcMain.handle('convert-files', async (event, filePaths, settings) => {
       });
     }
   }
-  
+
   return {
     success: true,
-    results
+    results,
+    totalCost
   };
 });
 
 // Show output folder
 ipcMain.handle('show-output-folder', async () => {
   const outputDir = path.join(app.getPath('documents'), 'PDF-Converter-Output');
-  
+
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
-  
+
   require('electron').shell.openPath(outputDir);
+});
+
+// Get prompt (advanced, simple, or custom)
+ipcMain.handle('get-prompt', async (event, mode) => {
+  try {
+    if (mode === 'custom') {
+      // Get custom prompt from store
+      const customPrompt = store.get('custom-prompt', null);
+      if (customPrompt) {
+        return { success: true, prompt: customPrompt, mode: 'custom' };
+      }
+      // Fall back to simple if no custom prompt exists
+      mode = 'simple';
+    }
+
+    // Load from file
+    const promptFileName = mode === 'advanced' ? 'master-prompt.txt' : 'basic-prompt.txt';
+    const promptPath = path.join(__dirname, 'prompts', promptFileName);
+    const promptText = fs.readFileSync(promptPath, 'utf-8');
+
+    return { success: true, prompt: promptText, mode };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Save custom prompt
+ipcMain.handle('save-custom-prompt', async (event, text) => {
+  try {
+    store.set('custom-prompt', text);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Reset prompt (clear custom, return to default)
+ipcMain.handle('reset-prompt', async (event, mode) => {
+  try {
+    if (mode === 'custom') {
+      // Clear custom prompt from store
+      store.delete('custom-prompt');
+    }
+
+    // Return the default prompt for the requested mode
+    const promptFileName = mode === 'advanced' ? 'master-prompt.txt' : 'basic-prompt.txt';
+    const promptPath = path.join(__dirname, 'prompts', promptFileName);
+    const promptText = fs.readFileSync(promptPath, 'utf-8');
+
+    return { success: true, prompt: promptText, mode };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });
