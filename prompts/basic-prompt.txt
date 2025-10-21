@@ -38,12 +38,14 @@ Convert simple PDF documents (letters, essays, basic reports, plain text) to Wor
 - NO metadata in DOCX properties
 - NO comments or annotations from you
 - ONLY the document content as described
+- **CRITICAL: DO NOT ADD TITLES, HEADINGS, OR ANY TEXT THAT IS NOT IN THE PDF**
 
-### 6. **NO TABLES:**
-- This is a SIMPLE conversion - do NOT create tables
+### 6. **NO DATA TABLES:**
+- This is a SIMPLE conversion - do NOT create data tables with visible borders
 - Convert any tabular-looking data to formatted paragraphs or lists
 - Use indentation and spacing to preserve structure if needed
 - Focus on readability over complex formatting
+- **EXCEPTION: Use invisible-bordered tables (BorderStyle.NONE) for horizontal spatial layouts only**
 
 ---
 
@@ -85,11 +87,11 @@ Convert simple PDF documents (letters, essays, basic reports, plain text) to Wor
 - **Color**: ALWAYS `color: "000000"` (black)
 
 ### Document Structure:
-- **Titles**: Large, centered text → use largest font size, center alignment
-- **Headings**: Hierarchical levels (H1, H2, H3) based on size and weight
+- **All text**: Reproduce EXACT font size from PDF (do NOT interpret as "titles" or "headings")
 - **Body Text**: Regular paragraphs with appropriate spacing
 - **Lists**: Use proper list structures (bulleted or numbered)
 - **Page Breaks**: Insert PageBreak between pages
+- **Spatial layout**: Use invisible-bordered tables (BorderStyle.NONE) for text positioned side-by-side
 
 ### Alignment:
 - Preserve original text alignment
@@ -107,17 +109,19 @@ Convert simple PDF documents (letters, essays, basic reports, plain text) to Wor
 - Mark headers/footers to skip
 
 ### Step 2: Content Classification
-- Identify titles and headings (by size and position)
+- Note EXACT font sizes from PDF (do NOT interpret as "titles" or "headings")
 - Separate into paragraphs
-- Note formatting (bold, italic, sizes)
+- Note formatting (bold, italic, exact sizes)
+- Identify spatial layout: text positioned horizontally side-by-side
 - Find handwritten signatures to replace
 - Identify lists (bulleted or numbered)
 
 ### Step 3: Build Structure
 - Create document outline
-- Define styles for titles, headings, body text
+- Reproduce exact font sizes from PDF (no special "title" or "heading" styles)
 - Ensure all styles have `color: "000000"`
 - Plan paragraph spacing
+- Plan invisible tables for horizontal spatial layouts
 
 ### Step 4: Implement Page Markers
 **REMINDER:** Use the actual PDF page position (1st page, 2nd page, 3rd page of the PDF file), NOT any page numbers written in the document content.
@@ -165,8 +169,9 @@ And so on for each subsequent PDF page.
 ### Required Imports:
 ```javascript
 const fs = require('fs');
-const { Document, Packer, Paragraph, TextRun,
-        AlignmentType, UnderlineType, PageBreak } = require('docx');
+const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+        AlignmentType, BorderStyle, UnderlineType, PageBreak } = require('docx');
+// Note: Table imports added for invisible tables (spatial layout only)
 ```
 
 ### Document Template with NO METADATA:
@@ -258,6 +263,40 @@ new Paragraph({
 })
 ```
 
+### Invisible Table for Spatial Layout:
+```javascript
+// For text positioned side-by-side (e.g., Name left, Date right)
+const { Table, TableRow, TableCell, BorderStyle } = require('docx');
+
+const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
+
+new Table({
+  columnWidths: [4680, 4680], // Adjust as needed
+  margins: { top: 0, bottom: 0, left: 0, right: 0 },
+  rows: [
+    new TableRow({
+      children: [
+        new TableCell({
+          borders: noBorders,
+          children: [new Paragraph({
+            alignment: AlignmentType.LEFT,
+            children: [new TextRun({ text: "Left text", color: "000000" })]
+          })]
+        }),
+        new TableCell({
+          borders: noBorders,
+          children: [new Paragraph({
+            alignment: AlignmentType.RIGHT,
+            children: [new TextRun({ text: "Right text", color: "000000" })]
+          })]
+        })
+      ]
+    })
+  ]
+})
+```
+
 ---
 
 ## VERIFICATION CHECKLIST:
@@ -270,7 +309,10 @@ new Paragraph({
 - ✓ Signatures replaced with [Signature]
 - ✓ NO metadata in document properties
 - ✓ NO extra explanatory text
-- ✓ NO TABLES created (simple paragraphs/lists only)
+- ✓ NO added titles, headings, or content not in PDF
+- ✓ Text reproduced with EXACT font sizes from PDF
+- ✓ NO DATA TABLES created (simple paragraphs/lists only)
+- ✓ Invisible tables used for horizontal spatial layouts when needed
 
 **Content:**
 - ✓ All body text from PDF is present

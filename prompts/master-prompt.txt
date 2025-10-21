@@ -37,12 +37,14 @@
    - NO metadata in DOCX properties
    - NO comments or annotations from you
    - ONLY the document content as described
+   - **CRITICAL: DO NOT ADD TITLES, HEADINGS, OR ANY TEXT THAT IS NOT IN THE PDF**
 
 6. **Reproduce ONLY:**
-   - Text size (match original as closely as possible)
+   - Text with EXACT font size from original (do NOT interpret or add "titles" or "headings")
    - Text format (bold, italic, underline - but ALL black)
    - Document structure (paragraphs, tables, lists)
-   - Nothing else
+   - Spatial positioning (use invisible tables for side-by-side text)
+   - Nothing else - NO ADDED CONTENT
 
 ---
 
@@ -83,27 +85,38 @@
 
 **ASK THESE QUESTIONS:**
 
-1. **Column Test:** Does this content have 2+ distinct columns of information?
-   - YES → Likely a table
+1. **Multi-Column Document Test:** Is this a multi-column document layout (like a newspaper)?
+   - YES → Extract text left column FIRST (entire column), then right column BELOW as plain paragraphs. DO NOT use tables.
    - NO → Continue to next test
 
-2. **Repetition Test:** Does the same structure repeat for multiple items/rows?
-   - YES → Likely a table
+2. **Spatial Layout Test:** Is text positioned side-by-side that needs to STAY side-by-side (not sequential reading)?
+   - Examples: Three signatures in a row, date on right + name on left at same height
+   - YES → Create INVISIBLE-BORDERED table (BorderStyle.NONE) to preserve horizontal layout
    - NO → Continue to next test
 
-3. **Attribute Test:** Are multiple attributes being shown for each entity/item?
-   - YES → Likely a table
+3. **Column Test:** Does this content have 2+ distinct columns of DATA (not document layout)?
+   - YES → Likely a data table (with visible borders)
    - NO → Continue to next test
 
-4. **Comparison Test:** Is this comparing or listing similar items side-by-side?
-   - YES → Likely a table
+4. **Repetition Test:** Does the same structure repeat for multiple items/rows?
+   - YES → Likely a data table (with visible borders)
+   - NO → Continue to next test
+
+5. **Attribute Test:** Are multiple attributes being shown for each entity/item?
+   - YES → Likely a data table (with visible borders)
+   - NO → Continue to next test
+
+6. **Comparison Test:** Is this comparing or listing similar items side-by-side?
+   - YES → Likely a data table (with visible borders)
    - NO → Likely plain text
 
-5. **Alignment Test:** Is vertical alignment critical to understanding the data?
-   - YES → Definitely a table
+7. **Alignment Test:** Is vertical alignment critical to understanding the data?
+   - YES → Definitely a data table (with visible borders)
    - NO → Could be plain text
 
-**IF 2+ TESTS ANSWER "YES" → CREATE A TABLE**
+**IF TEST 1 ANSWERS "YES" → Plain paragraphs (left column first, then right column below)**
+**IF TEST 2 ANSWERS "YES" → CREATE INVISIBLE-BORDERED TABLE**
+**IF 2+ OF TESTS 3-7 ANSWER "YES" → CREATE VISIBLE-BORDERED TABLE**
 
 ### Table vs. Plain Text Guidelines:
 
@@ -178,15 +191,17 @@
 
 ### Document Elements:
 
-**Identify and recreate:**
-- Titles (largest text, centered/prominent) - **BLACK TEXT**
-- Headings (hierarchical levels H1, H2, H3) - **BLACK TEXT**
+**Reproduce EXACTLY as shown in PDF:**
+- All text with EXACT font size from PDF (do NOT interpret as "titles" or "headings" - just match the size) - **BLACK TEXT**
 - Body text (normal paragraphs) - **BLACK TEXT**
 - Lists (bulleted or numbered) - **BLACK TEXT**
 - Tables (per rules above) - **BLACK TEXT in all cells**
+- **Spatial layout:** Use invisible-bordered tables (BorderStyle.NONE) for text positioned side-by-side (signatures in a row, date on right + name on left, etc.)
 - Images: **Replace signatures with [Signature]**, include other images if present
 - **IGNORE page numbers and headers/footers**
 - Forms and structured sections
+
+**DO NOT ADD ANY CONTENT. Only reproduce what exists in the PDF with exact font sizes and positioning.**
 
 ---
 
@@ -203,8 +218,9 @@
 2. **Content Classification:**
    - Separate text, tables, images, forms
    - **Filter out headers and footers**
-   - Identify titles (not from headers)
-   - Note formatting styles (bold, italic, sizes)
+   - Note formatting styles (bold, italic, EXACT font sizes from PDF)
+   - **DO NOT interpret text as "titles" or "headings" - just note the exact font size**
+   - Identify spatial layout: text positioned horizontally side-by-side
    - **Find handwritten signatures to replace**
 
 3. **Table Detection:**
@@ -269,8 +285,9 @@
 ```javascript
 const fs = require('fs');
 const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
-        AlignmentType, BorderStyle, WidthType, ShadingType, HeadingLevel,
+        AlignmentType, BorderStyle, WidthType, ShadingType,
         UnderlineType, PageBreak } = require('docx');
+// Note: HeadingLevel removed - do NOT use heading styles, just reproduce exact font sizes
 ```
 
 ### Document Template with NO METADATA:
@@ -323,7 +340,7 @@ const doc = new Document({
 });
 ```
 
-### Table Template (Universal) - BLACK TEXT:
+### Table Template (Data Table with Visible Borders) - BLACK TEXT:
 ```javascript
 // Define borders once
 const tableBorder = { style: BorderStyle.SINGLE, size: 1, color: "CCCCCC" };
@@ -341,13 +358,13 @@ new Table({
         new TableCell({
           borders: cellBorders,
           shading: { fill: "E7E6E6", type: ShadingType.CLEAR },
-          children: [new Paragraph({ 
-            children: [new TextRun({ 
-              text: "Column Header", 
-              bold: true, 
+          children: [new Paragraph({
+            children: [new TextRun({
+              text: "Column Header",
+              bold: true,
               size: 20,
               color: "000000" // ← BLACK
-            })] 
+            })]
           })]
         }),
         // ... repeat for each column
@@ -358,17 +375,59 @@ new Table({
       children: [
         new TableCell({
           borders: cellBorders,
-          children: [new Paragraph({ 
-            children: [new TextRun({ 
+          children: [new Paragraph({
+            children: [new TextRun({
               text: "Cell Data",
               color: "000000" // ← BLACK
-            })] 
+            })]
           })]
         }),
         // ... repeat for each column
       ]
     }),
     // ... repeat for each row
+  ]
+})
+```
+
+### Table Template (Invisible-Bordered for Spatial Layout) - BLACK TEXT:
+```javascript
+// Define invisible borders
+const noBorder = { style: BorderStyle.NONE, size: 0, color: "FFFFFF" };
+const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
+
+// Create invisible table to preserve horizontal layout
+// Example: Name on left, Date on right
+new Table({
+  columnWidths: [4680, 4680], // Split page width equally, adjust as needed
+  margins: { top: 0, bottom: 0, left: 0, right: 0 },
+  rows: [
+    new TableRow({
+      children: [
+        new TableCell({
+          borders: noBorders,
+          children: [new Paragraph({
+            alignment: AlignmentType.LEFT,
+            children: [new TextRun({
+              text: "John Smith",
+              size: 22,
+              color: "000000"
+            })]
+          })]
+        }),
+        new TableCell({
+          borders: noBorders,
+          children: [new Paragraph({
+            alignment: AlignmentType.RIGHT,
+            children: [new TextRun({
+              text: "January 15, 2025",
+              size: 22,
+              color: "000000"
+            })]
+          })]
+        })
+      ]
+    })
   ]
 })
 ```
@@ -416,6 +475,10 @@ Before finalizing, confirm:
 - ✓ **Signatures replaced with [Signature]**
 - ✓ **NO metadata in document properties**
 - ✓ **NO extra explanatory text**
+- ✓ **NO added titles, headings, or content not in PDF**
+- ✓ **Text reproduced with EXACT font sizes from PDF (no interpretation)**
+- ✓ **Invisible tables used for horizontal spatial layouts**
+- ✓ **Multi-column docs: left column first, then right column below as paragraphs**
 
 **Content:**
 - ✓ All body text from PDF is present
@@ -455,12 +518,17 @@ Before finalizing, confirm:
 ❌ **WRONG:** Including actual signature images
 ❌ **WRONG:** Adding explanatory text or metadata
 ❌ **WRONG:** Including any non-black text
+❌ **WRONG:** Interpreting text as "titles" or "headings" - just reproduce exact font size from PDF
+❌ **WRONG:** Adding content that doesn't exist in the PDF
 
 ### Table-Related Errors:
 ❌ **WRONG:** Converting tabular data to paragraphs
-❌ **WRONG:** Missing header rows
+❌ **WRONG:** Missing header rows in data tables
 ❌ **WRONG:** Inconsistent column counts
 ❌ **WRONG:** Colored text in tables
+❌ **WRONG:** Using visible borders for spatial layout (use BorderStyle.NONE instead)
+❌ **WRONG:** Using tables for multi-column documents (extract left column first, then right column below as paragraphs)
+❌ **WRONG:** Not preserving horizontal spatial positioning (use invisible tables for side-by-side text)
 
 ### General Errors:
 ❌ Using \n for line breaks
