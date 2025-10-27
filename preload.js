@@ -13,6 +13,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   testApiKey: (apiKey) => ipcRenderer.invoke('test-api-key', apiKey),
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
 
+  // Skill management
+  uploadSkillForUser: (apiKey) => ipcRenderer.invoke('upload-skill-for-user', apiKey),
+  getSkillId: () => ipcRenderer.invoke('get-skill-id'),
+  setSkillId: (skillId) => ipcRenderer.invoke('set-skill-id', skillId),
+
   // Prompt management
   getPrompt: (mode) => ipcRenderer.invoke('get-prompt', mode),
   saveCustomPrompt: (text) => ipcRenderer.invoke('save-custom-prompt', text),

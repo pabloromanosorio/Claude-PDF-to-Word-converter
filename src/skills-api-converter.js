@@ -3,6 +3,33 @@ const path = require('path');
 const Anthropic = require('@anthropic-ai/sdk');
 const apiKeyManager = require('./api-key-manager');
 
+// Fallback skill instructions for when skill_id is not available
+const EMBEDDED_SKILL_INSTRUCTIONS = `
+You are an expert document converter with access to specialized tools for processing images and PDFs.
+
+**Available Tools:**
+1. extractPdfContent - Extracts structured text data with coordinates from PDFs
+2. createDocxFromContent - Creates Word documents from structured content
+
+**Your Task:**
+Convert the provided image/PDF to a professional Word document with high fidelity.
+
+**Instructions:**
+
+1. **Extract Content:** Use extractPdfContent to get structured text data including positions.
+
+2. **Analyze and Reconstruct Layout:**
+   - Group text items into paragraphs based on proximity and alignment
+   - Identify tabular data by analyzing vertical/horizontal alignment
+   - For side-by-side elements (signatures, headers with left/right info), use tables with clear borders
+
+3. **Handle Special Characters:** Preserve Spanish accents (á, é, í, ó, ú, ñ) and special symbols perfectly.
+
+4. **Build Document:** Use createDocxFromContent to create the final Word document matching the original layout.
+
+Begin the conversion process using the available tools.
+`;
+
 /**
  * Convert file using Skills API
  */
@@ -12,11 +39,7 @@ async function convertWithSkills(filePath, fileName, settings, progressCallback)
     throw new Error('API key not configured');
   }
 
-  const skillId = apiKeyManager.getSkillId();
-  if (!skillId) {
-    throw new Error('Skill ID not configured. Upload the skill first.');
-  }
-
+  const skillId = apiKeyManager.getSkillIdOrNull();
   const client = new Anthropic({ apiKey });
   const outputDir = path.dirname(filePath);
 
@@ -28,29 +51,20 @@ async function convertWithSkills(filePath, fileName, settings, progressCallback)
     const fileBase64 = fileToBase64(filePath);
 
     // Step 2: Build prompt with user settings
-    const prompt = buildPrompt(settings, outputDir, fileName);
+    const prompt = buildPrompt(settings, outputDir, fileName, skillId);
 
-    // Step 3: Send to Claude with Skills API
+    // Step 3: Send to Claude with or without Skills API
     progressCallback({ status: 'analyzing', progress: 30 });
 
-    const response = await client.messages.create({
+    // Build API request configuration
+    const messageConfig = {
       model: settings.model || 'claude-sonnet-4-5-20250929',
       max_tokens: 16000,
-      betas: [
-        'code-execution-2025-08-25',
-        'skills-2025-10-02'
-      ],
+      betas: ['code-execution-2025-08-25'],
       tools: [{
         type: 'code_execution_2025_08_25',
         name: 'code_execution'
       }],
-      container: {
-        skills: [{
-          type: 'custom',
-          skill_id: skillId,
-          version: 'latest'
-        }]
-      },
       messages: [{
         role: 'user',
         content: [
@@ -68,7 +82,21 @@ async function convertWithSkills(filePath, fileName, settings, progressCallback)
           }
         ]
       }]
-    });
+    };
+
+    // Add Skills API configuration if skill_id is available
+    if (skillId) {
+      messageConfig.betas.push('skills-2025-10-02');
+      messageConfig.container = {
+        skills: [{
+          type: 'custom',
+          skill_id: skillId,
+          version: 'latest'
+        }]
+      };
+    }
+
+    const response = await client.messages.create(messageConfig);
 
     progressCallback({ status: 'generating', progress: 70 });
 
@@ -127,8 +155,13 @@ function fileToBase64(filePath) {
   return fileBuffer.toString('base64');
 }
 
-function buildPrompt(settings, outputPath, fileName) {
+function buildPrompt(settings, outputPath, fileName, skillId) {
+  // Add embedded instructions if no skill_id is available
+  const skillInstructions = skillId ? '' : EMBEDDED_SKILL_INSTRUCTIONS;
+
   return `
+${skillInstructions}
+
 Convert this document image to a professional Word document.
 
 **Output Settings:**

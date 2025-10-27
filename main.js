@@ -287,3 +287,68 @@ ipcMain.handle('reset-prompt', async (event, mode) => {
     return { success: false, error: error.message };
   }
 });
+
+// Get skill ID
+ipcMain.handle('get-skill-id', async () => {
+  return apiKeyManager.getSkillId();
+});
+
+// Set skill ID
+ipcMain.handle('set-skill-id', async (event, skillId) => {
+  apiKeyManager.setSkillId(skillId);
+  return { success: true };
+});
+
+// Upload skill for user
+ipcMain.handle('upload-skill-for-user', async (event, apiKey) => {
+  try {
+    const FormData = require('form-data');
+
+    // Read skill package
+    const skillPath = path.join(__dirname, 'image-to-docx-converter.zip');
+    if (!fs.existsSync(skillPath)) {
+      throw new Error('Skill package not found in app resources');
+    }
+
+    const skillBuffer = fs.readFileSync(skillPath);
+
+    // Create form data
+    const form = new FormData();
+    form.append('file', skillBuffer, {
+      filename: 'image-to-docx-converter.zip',
+      contentType: 'application/zip'
+    });
+
+    // Upload via Skills API
+    const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
+    const response = await fetch('https://api.anthropic.com/v1/skills', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'skills-2025-10-02',
+        ...form.getHeaders()
+      },
+      body: form
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Upload failed: ${response.status} - ${errorText}`);
+    }
+
+    const result = await response.json();
+
+    // Store the skill_id
+    apiKeyManager.setSkillId(result.skill_id);
+
+    return { success: true, skill_id: result.skill_id };
+
+  } catch (error) {
+    return {
+      success: false,
+      error: error.message,
+      canFallback: true // User can use app without Skills API
+    };
+  }
+});

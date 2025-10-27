@@ -27,8 +27,14 @@ class ApiKeyManager {
   }
 
   getSkillId() {
-    // Load from environment or config
-    return process.env.SKILL_ID || store.get('skill_id');
+    // Return stored skill_id only (no process.env fallback)
+    return store.get('skill_id');
+  }
+
+  getSkillIdOrNull() {
+    // Explicitly return null if not set
+    const skillId = store.get('skill_id');
+    return skillId || null;
   }
 
   setSkillId(skillId) {
