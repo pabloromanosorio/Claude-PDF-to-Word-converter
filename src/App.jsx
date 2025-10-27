@@ -1,4 +1,5 @@
 const { useState, useEffect } = React;
+const WelcomeScreen = require('./components/WelcomeScreen');
 
 const MODELS = {
   'claude-haiku-4-5': {
@@ -21,6 +22,7 @@ const MODELS = {
 function App() {
   const [apiKey, setApiKey] = useState('');
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [settings, setSettings] = useState(null);
   const [isConverting, setIsConverting] = useState(false);
@@ -31,8 +33,16 @@ function App() {
   const [promptExpanded, setPromptExpanded] = useState(false);
 
   useEffect(() => {
+    async function checkApiKey() {
+      const hasKey = await window.electronAPI.hasApiKey();
+      setShowWelcome(!hasKey);
+      if (hasKey) {
+        loadApiKey();
+      }
+    }
+
     loadSettings();
-    loadApiKey();
+    checkApiKey();
 
     // Listen for progress updates
     window.electronAPI.onConversionProgress((data) => {
@@ -188,6 +198,18 @@ function App() {
   }
 
   if (!settings) return <div className="loading">Loading...</div>;
+
+  // Show welcome screen if no API key
+  if (showWelcome) {
+    return (
+      <WelcomeScreen
+        onComplete={() => {
+          setShowWelcome(false);
+          loadApiKey();
+        }}
+      />
+    );
+  }
 
   const estimatedSavings = settings.promptMode === 'simple' ? '~40-50% vs Advanced' :
                           settings.promptMode === 'advanced' ? 'Most detailed' :

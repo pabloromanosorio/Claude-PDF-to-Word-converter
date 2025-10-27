@@ -4,6 +4,8 @@ const { useState } = React;
 function WelcomeScreen({ onComplete }) {
   const [apiKey, setApiKey] = useState('');
   const [error, setError] = useState('');
+  const [status, setStatus] = useState('');
+  const [showFallbackOption, setShowFallbackOption] = useState(false);
 
   const handleGetApiKey = () => {
     window.electronAPI.openExternal('https://console.anthropic.com/settings/keys');
@@ -21,17 +23,54 @@ function WelcomeScreen({ onComplete }) {
     }
 
     try {
+      setError('');
+      setStatus('Saving API key...');
       await window.electronAPI.saveApiKey(apiKey);
-      onComplete();
+
+      // Check if skill already uploaded
+      const existingSkillId = await window.electronAPI.getSkillId();
+      if (existingSkillId) {
+        setStatus('Ready to convert!');
+        setTimeout(() => onComplete(), 1000);
+        return;
+      }
+
+      // Upload skill to user's account
+      setStatus('Setting up your converter (one-time setup, ~10 seconds)...');
+      const result = await window.electronAPI.uploadSkillForUser(apiKey);
+
+      if (result.success) {
+        setStatus('Setup complete! Ready to convert.');
+        setTimeout(() => onComplete(), 1500);
+      } else {
+        // Upload failed but app can still work
+        setError(`Setup warning: ${result.error}\n\nDon't worry - the app will still work with embedded instructions.`);
+        setShowFallbackOption(true);
+        setStatus('');
+      }
+
     } catch (err) {
-      setError('Failed to save API key: ' + err.message);
+      setError('Failed to save: ' + err.message);
+      setStatus('');
     }
+  };
+
+  const handleSkipSetup = () => {
+    setError('');
+    setShowFallbackOption(false);
+    onComplete();
+  };
+
+  const handleRetry = async () => {
+    setError('');
+    setShowFallbackOption(false);
+    await handleSave();
   };
 
   return (
     <div className="welcome-screen">
       <div className="welcome-header">
-        <h1>Welcome! 👋</h1>
+        <h1>Welcome!</h1>
         <p>Convert document images to professional Word files in seconds, powered by Claude AI.</p>
       </div>
 
@@ -52,17 +91,34 @@ function WelcomeScreen({ onComplete }) {
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
         />
-        <button className="btn-primary" onClick={handleSave}>
-          Save
+        <button className="btn-primary" onClick={handleSave} disabled={!!status}>
+          {status ? 'Setting up...' : 'Save'}
         </button>
-        {error && <p className="error-text">{error}</p>}
+        {status && <p className="status-text">{status}</p>}
+        {error && (
+          <div className="error-section">
+            <p className="error-text">{error}</p>
+            {showFallbackOption && (
+              <div className="fallback-buttons">
+                <button className="btn-secondary" onClick={handleRetry}>
+                  Retry Setup
+                </button>
+                <button className="btn-link" onClick={handleSkipSetup}>
+                  Skip Skills API (use embedded instructions)
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      <p className="security-note">🔒 Your API key is stored securely and never shared.</p>
+      <p className="security-note">Your API key is stored securely and never shared.</p>
 
-      <button className="btn-link" onClick={onComplete}>
-        Skip for now
-      </button>
+      {!showFallbackOption && (
+        <button className="btn-link" onClick={onComplete}>
+          Skip for now
+        </button>
+      )}
     </div>
   );
 }
