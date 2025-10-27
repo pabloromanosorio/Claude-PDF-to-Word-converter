@@ -501,6 +501,10 @@ async function convertFile(filePath, fileName, settings, apiKey, progressCallbac
   }
 }
 
+// Export Skills API converter
+const { convertWithSkills } = require('./src/skills-api-converter');
+
 module.exports = {
-  convertFile
+  convertFile,
+  convertWithSkills
 };
