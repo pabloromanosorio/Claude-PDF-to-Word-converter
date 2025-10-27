@@ -1,4 +1,35 @@
-node_modules
-.DS_Store
-.env
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.pytest_cache/
+*.egg-info/
 dist/
+build/
+*.egg
+
+# User data (never commit)
+.user-data/
+config.json
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Installers (build locally)
+installers/
+
+# Node (if any remain)
+node_modules/
+package-lock.json
