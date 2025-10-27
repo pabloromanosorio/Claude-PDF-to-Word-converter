@@ -32,8 +32,8 @@
     "electron-builder": "^24.9.1"
   },
   "build": {
-    "appId": "com.yourcompany.pdf-converter",
-    "productName": "Claude PDF to Word",
+    "appId": "com.imagetoword.converter",
+    "productName": "Image to Word Converter",
     "directories": {
       "output": "dist"
     },
@@ -42,17 +42,29 @@
       "preload.js",
       "converter.js",
       "src/**/*",
-      "skills/**/*",
       "prompts/**/*",
       "node_modules/**/*"
     ],
     "mac": {
       "category": "public.app-category.productivity",
-      "icon": "assets/icon.png"
+      "icon": "build/icon.icns",
+      "target": ["dmg", "pkg"],
+      "hardenedRuntime": true
+    },
+    "dmg": {
+      "title": "Image to Word Converter",
+      "backgroundColor": "#ffffff"
     },
     "win": {
       "target": "nsis",
-      "icon": "assets/icon.png"
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Image to Word Converter"
     }
   }
 }
