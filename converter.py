@@ -89,7 +89,7 @@ def upload_skill(api_key: str, client: Optional[Anthropic] = None) -> Optional[s
             for _, file_handle in files_list:
                 try:
                     file_handle.close()
-                except:
+                except Exception:  # Don't catch SystemExit/KeyboardInterrupt
                     pass
             # Clean up temp directory
             shutil.rmtree(temp_dir, ignore_errors=True)
