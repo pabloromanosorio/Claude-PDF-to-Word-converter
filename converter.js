@@ -169,6 +169,31 @@ function extractCode(responseText) {
 }
 
 /**
+ * Sanitize generated code to fix common syntax errors like unescaped quotes.
+ */
+function sanitizeCode(code) {
+  // This function processes the code line by line to find and fix unescaped quotes
+  // within string literals, specifically for 'text:' properties.
+  return code.split('\n').map(line => {
+    const textPropertyRegex = /^(\s*text:\s*")(.*)(")(,?)$/;
+    const match = line.match(textPropertyRegex);
+
+    if (match) {
+      const prefix = match[1];
+      let content = match[2];
+      const suffix = match[3] + match[4];
+
+      // Escape unescaped double quotes within the content string
+      content = content.replace(/(?<!\\)"/g, '\\"');
+      
+      return `${prefix}${content}${suffix}`;
+    }
+    
+    return line;
+  }).join('\n');
+}
+
+/**
  * Execute generated code
  */
 async function executeCode(code, tempDir, fileName, progressCallback) {
@@ -437,7 +462,10 @@ async function convertFile(filePath, fileName, settings, apiKey, progressCallbac
     progressCallback({ status: 'generating code', progress: 60 });
 
     const responseText = response.content[0].text;
-    const code = extractCode(responseText);
+    let code = extractCode(responseText);
+
+    // Sanitize code to fix issues like unescaped quotes
+    code = sanitizeCode(code);
 
     // Step 4: Execute code
     progressCallback({ status: 'creating document', progress: 80 });
