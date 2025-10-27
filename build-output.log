@@ -1,0 +1,14 @@
+
+> claude-pdf-to-word-converter@1.0.0 build
+> electron-builder
+
+  • electron-builder  version=24.13.3 os=25.0.0
+  • loaded configuration  file=package.json ("build" field)
+  • packaging       platform=darwin arch=arm64 electron=28.3.3 appOutDir=dist/mac-arm64
+  • skipped macOS application code signing  reason=cannot find valid "Developer ID Application" identity or custom non-Apple code signing certificate, it could cause some undefined behaviour, e.g. macOS localized description not visible, see https://electron.build/code-signing allIdentities=     0 identities found
+                                                Valid identities only
+     0 valid identities found
+  • building        target=DMG arch=arm64 file=dist/Image to Word Converter-1.0.0-arm64.dmg
+  • building        target=pkg arch=arm64 file=dist/Image to Word Converter-1.0.0-arm64.pkg
+  • Detected arm64 process, HFS+ is unavailable. Creating dmg with APFS - supports Mac OSX 10.12+
+  • building block map  blockMapFile=dist/Image to Word Converter-1.0.0-arm64.dmg.blockmap

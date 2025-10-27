@@ -50,7 +50,10 @@
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "build/icon.icns",
-      "target": ["dmg", "pkg"],
+      "target": [
+        "dmg",
+        "pkg"
+      ],
       "hardenedRuntime": true
     },
     "dmg": {
