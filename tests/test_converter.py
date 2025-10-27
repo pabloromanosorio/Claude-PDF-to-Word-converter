@@ -98,3 +98,63 @@ def test_calculate_cost_accuracy():
     # Test with unknown model (should use Sonnet pricing)
     cost_unknown = calculate_cost(usage, 'unknown-model')
     assert cost_unknown == calculate_cost(usage, 'claude-sonnet-4-5-20250929')
+
+
+def test_convert_document_calls_api_correctly(mock_anthropic_client, tmp_path):
+    """Test that convert_document calls API with correct parameters"""
+    # Mock API response
+    mock_response = MagicMock()
+    mock_response.content = [
+        MagicMock(type='text', text='''```javascript
+const fs = require('fs');
+const { Document, Packer, Paragraph, TextRun } = require('docx');
+
+const doc = new Document({
+    sections: [{
+        properties: {},
+        children: [
+            new Paragraph({
+                children: [new TextRun("Test document")]
+            })
+        ]
+    }]
+});
+
+Packer.toBuffer(doc).then(buffer => {
+    fs.writeFileSync('./test.docx', buffer);
+    console.log('SUCCESS: test.docx');
+    process.exit(0);
+});
+```''')
+    ]
+    mock_response.usage = MagicMock(input_tokens=1000, output_tokens=500)
+
+    mock_anthropic_client.beta.messages.create.return_value = mock_response
+
+    # Create test PDF
+    test_pdf = tmp_path / "test.pdf"
+    test_pdf.write_bytes(b"%PDF-1.4 fake pdf")
+
+    settings = {
+        'font': 'Arial',
+        'fontSize': 12,
+        'model': 'claude-sonnet-4-5-20250929',
+        'margins': {'top': 1.0, 'right': 1.0, 'bottom': 1.0, 'left': 1.0}
+    }
+
+    from converter import convert_document
+
+    with patch('converter.execute_generated_code', return_value={'success': True}):
+        result = convert_document(
+            str(test_pdf),
+            settings,
+            "sk-ant-test123",
+            skill_id="skill_test123",
+            client=mock_anthropic_client
+        )
+
+    # Verify API was called with Skills API parameters
+    call_args = mock_anthropic_client.beta.messages.create.call_args
+    assert call_args.kwargs['betas'] == ["code-execution-2025-08-25", "skills-2025-10-02"]
+    assert 'container' in call_args.kwargs
+    assert call_args.kwargs['container']['skills'][0]['skill_id'] == 'skill_test123'

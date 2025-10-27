@@ -11,6 +11,9 @@ This module handles:
 import os
 import base64
 import logging
+import subprocess
+import tempfile
+import shutil
 from pathlib import Path
 from typing import Dict, Any, Optional, Callable
 from anthropic import Anthropic
@@ -198,26 +201,215 @@ def calculate_cost(usage: Dict[str, int], model: str) -> float:
     return input_cost + output_cost
 
 
+def file_to_base64(file_path: str) -> str:
+    """Convert file to base64 encoding"""
+    with open(file_path, 'rb') as f:
+        return base64.b64encode(f.read()).decode('utf-8')
+
+
+def get_media_type(file_path: str) -> str:
+    """Determine media type from file extension"""
+    ext = Path(file_path).suffix.lower()
+    media_types = {
+        '.pdf': 'application/pdf',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png'
+    }
+    return media_types.get(ext, 'application/pdf')
+
+
+def extract_code_from_response(response_text: str) -> Optional[str]:
+    """Extract JavaScript code from API response"""
+    import re
+
+    # Try to find code block
+    code_block_pattern = r'```(?:javascript)?\n(.*?)\n```'
+    matches = re.findall(code_block_pattern, response_text, re.DOTALL)
+
+    if matches:
+        return matches[0]
+
+    return None
+
+
+def execute_generated_code(code: str, output_dir: str) -> Dict[str, Any]:
+    """
+    Execute generated JavaScript code to create .docx file.
+
+    Args:
+        code: JavaScript code to execute
+        output_dir: Directory where .docx should be created
+
+    Returns:
+        Dict with success status
+    """
+    temp_dir = Path(tempfile.mkdtemp())
+
+    try:
+        # Write code to temp file
+        code_file = temp_dir / 'generate_docx.js'
+        code_file.write_text(code)
+
+        # Set NODE_PATH to use docx module
+        env = os.environ.copy()
+        # Assume docx is installed globally or provide path
+
+        # Execute with node
+        result = subprocess.run(
+            ['node', str(code_file)],
+            cwd=output_dir,
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+
+        if result.returncode == 0 and 'SUCCESS' in result.stdout:
+            return {'success': True, 'output': result.stdout}
+        else:
+            raise Exception(f"Code execution failed: {result.stderr}\n{result.stdout}")
+
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
+
 def convert_document(
     file_path: str,
     settings: Dict[str, Any],
     api_key: str,
     skill_id: Optional[str] = None,
-    progress_callback: Optional[Callable] = None
+    progress_callback: Optional[Callable] = None,
+    client: Optional[Anthropic] = None
 ) -> Dict[str, Any]:
     """
-    Convert document to Word format.
+    Convert document to Word format using Anthropic Skills API.
 
     Args:
         file_path: Path to PDF or image file
-        settings: User settings
+        settings: User settings (font, margins, model, etc.)
         api_key: Anthropic API key
         skill_id: Optional skill ID (will use embedded if None)
-        progress_callback: Optional callback for progress updates
+        progress_callback: Optional callback(dict) for progress updates
+        client: Optional pre-configured client (for testing)
 
     Returns:
-        Dict with success status, output path, and cost
+        Dict with:
+            - success: bool
+            - output_path: str (path to generated .docx)
+            - cost: float (in USD)
+            - error: str (if failed)
     """
-    # TODO: Implement full conversion
-    # For now, raise NotImplementedError
-    raise NotImplementedError("Full conversion implementation in next task")
+    try:
+        if progress_callback:
+            progress_callback({'status': 'preparing', 'progress': 10})
+
+        # Initialize client
+        if client is None:
+            client = Anthropic(api_key=api_key)
+
+        # Prepare file
+        file_base64 = file_to_base64(file_path)
+        media_type = get_media_type(file_path)
+        file_name = Path(file_path).stem
+
+        # Build prompt
+        prompt = build_prompt(settings, file_name)
+
+        if progress_callback:
+            progress_callback({'status': 'analyzing', 'progress': 30})
+
+        # Prepare API call
+        messages_params = {
+            'model': settings.get('model', 'claude-sonnet-4-5-20250929'),
+            'max_tokens': 16000,
+            'betas': ['code-execution-2025-08-25', 'skills-2025-10-02'],
+            'messages': [{
+                'role': 'user',
+                'content': [
+                    {
+                        'type': 'document',
+                        'source': {
+                            'type': 'base64',
+                            'media_type': media_type,
+                            'data': file_base64
+                        }
+                    },
+                    {
+                        'type': 'text',
+                        'text': prompt
+                    }
+                ]
+            }]
+        }
+
+        # Add skill if available
+        if skill_id:
+            messages_params['container'] = {
+                'skills': [{
+                    'type': 'custom',
+                    'skill_id': skill_id,
+                    'version': 'latest'
+                }]
+            }
+            messages_params['tools'] = [{
+                'type': 'code_execution_20250825',
+                'name': 'code_execution'
+            }]
+
+        # Call API
+        logger.info(f"Calling Anthropic API with model {settings.get('model')}")
+        response = client.beta.messages.create(**messages_params)
+
+        if progress_callback:
+            progress_callback({'status': 'generating', 'progress': 70})
+
+        # Extract code
+        response_text = ''
+        for block in response.content:
+            if hasattr(block, 'text'):
+                response_text += block.text
+
+        code = extract_code_from_response(response_text)
+
+        if not code:
+            return {
+                'success': False,
+                'error': 'No code generated in response'
+            }
+
+        # Execute code
+        output_dir = Path(file_path).parent
+        execute_result = execute_generated_code(code, str(output_dir))
+
+        if not execute_result['success']:
+            return {
+                'success': False,
+                'error': 'Code execution failed'
+            }
+
+        if progress_callback:
+            progress_callback({'status': 'complete', 'progress': 100})
+
+        # Calculate cost
+        cost = calculate_cost(
+            {
+                'input_tokens': response.usage.input_tokens,
+                'output_tokens': response.usage.output_tokens
+            },
+            settings.get('model')
+        )
+
+        output_path = output_dir / f"{file_name}.docx"
+
+        return {
+            'success': True,
+            'output_path': str(output_path),
+            'cost': cost
+        }
+
+    except Exception as e:
+        logger.error(f"Conversion failed: {e}")
+        return {
+            'success': False,
+            'error': str(e)
+        }
