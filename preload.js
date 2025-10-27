@@ -9,7 +9,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // API Key
   getApiKey: () => ipcRenderer.invoke('get-api-key'),
   saveApiKey: (apiKey) => ipcRenderer.invoke('save-api-key', apiKey),
+  hasApiKey: () => ipcRenderer.invoke('has-api-key'),
   testApiKey: (apiKey) => ipcRenderer.invoke('test-api-key', apiKey),
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
 
   // Prompt management
   getPrompt: (mode) => ipcRenderer.invoke('get-prompt', mode),

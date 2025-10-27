@@ -1,7 +1,8 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const Store = require('electron-store');
+const apiKeyManager = require('./src/api-key-manager');
 
 const store = new Store();
 let mainWindow;
@@ -94,13 +95,27 @@ ipcMain.handle('save-settings', async (event, settings) => {
 
 // Get API key
 ipcMain.handle('get-api-key', async () => {
-  return store.get('api-key', '');
+  return apiKeyManager.getApiKey();
 });
 
 // Save API key
 ipcMain.handle('save-api-key', async (event, apiKey) => {
-  store.set('api-key', apiKey);
-  return { success: true };
+  try {
+    apiKeyManager.saveApiKey(apiKey);
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Check if API key exists
+ipcMain.handle('has-api-key', async () => {
+  return apiKeyManager.hasApiKey();
+});
+
+// Open external URL
+ipcMain.handle('open-external', async (event, url) => {
+  await shell.openExternal(url);
 });
 
 // Test API key
@@ -147,8 +162,8 @@ ipcMain.handle('select-files', async () => {
 
 // Convert files
 ipcMain.handle('convert-files', async (event, filePaths, settings) => {
-  const apiKey = store.get('api-key', '');
-  
+  const apiKey = apiKeyManager.getApiKey();
+
   if (!apiKey) {
     return {
       success: false,
