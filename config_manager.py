@@ -131,7 +131,15 @@ class ConfigManager:
             'model': 'claude-sonnet-4-5-20250929'
         }
 
-        return config.get('settings', default_settings)
+        # Merge saved settings with defaults (saved settings override defaults)
+        saved_settings = config.get('settings', {})
+        merged = {**default_settings, **saved_settings}
+
+        # Handle nested margins dict separately
+        if 'margins' in saved_settings and isinstance(saved_settings['margins'], dict):
+            merged['margins'] = {**default_settings['margins'], **saved_settings['margins']}
+
+        return merged
 
     def save_skill_id(self, skill_id: str) -> None:
         """Save uploaded skill ID"""

@@ -53,7 +53,15 @@ def test_save_and_retrieve_settings(temp_config_dir):
     config.save_settings(settings)
     retrieved = config.get_settings()
 
-    assert retrieved == settings
+    # Should have saved values
+    assert retrieved['font'] == 'Arial'
+    assert retrieved['fontSize'] == 12
+    assert retrieved['model'] == 'claude-sonnet-4-5-20250929'
+
+    # Should also have defaults for missing fields
+    assert retrieved['margins'] == {'top': 1.0, 'right': 1.0, 'bottom': 1.0, 'left': 1.0}
+    assert retrieved['replaceSignatures'] == True
+    assert retrieved['addPageMarkers'] == True
 
 
 def test_skill_id_storage(temp_config_dir):
@@ -65,3 +73,24 @@ def test_skill_id_storage(temp_config_dir):
 
     retrieved = config.get_skill_id()
     assert retrieved == skill_id
+
+
+def test_partial_settings_merge_with_defaults(temp_config_dir):
+    """Test that partial settings merge with defaults"""
+    config = ConfigManager(config_dir=temp_config_dir)
+
+    # Save only font and model
+    partial = {'font': 'Times New Roman', 'model': 'claude-haiku-4-5'}
+    config.save_settings(partial)
+
+    retrieved = config.get_settings()
+
+    # Should have saved values
+    assert retrieved['font'] == 'Times New Roman'
+    assert retrieved['model'] == 'claude-haiku-4-5'
+
+    # Should also have defaults for missing fields
+    assert retrieved['fontSize'] == 12
+    assert retrieved['margins'] == {'top': 1.0, 'right': 1.0, 'bottom': 1.0, 'left': 1.0}
+    assert retrieved['replaceSignatures'] == True
+    assert retrieved['addPageMarkers'] == True
