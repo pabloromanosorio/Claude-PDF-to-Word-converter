@@ -17,6 +17,7 @@ import shutil
 from pathlib import Path
 from typing import Dict, Any, Optional, Callable
 from anthropic import Anthropic
+from anthropic.lib import files_from_dir
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -24,25 +25,6 @@ logger = logging.getLogger(__name__)
 
 # Skill package path
 SKILL_PATH = Path(__file__).parent / 'image-to-docx-converter.zip'
-
-
-def _collect_files_from_directory(directory: Path) -> list:
-    """
-    Recursively collect all files from directory for Skills API upload.
-
-    Args:
-        directory: Path to directory
-
-    Returns:
-        List of file tuples (relative_path, file_handle)
-    """
-    files = []
-    for item in directory.rglob('*'):
-        if item.is_file():
-            # Get relative path from directory
-            rel_path = item.relative_to(directory)
-            files.append((str(rel_path), open(item, 'rb')))
-    return files
 
 
 def upload_skill(api_key: str, client: Optional[Anthropic] = None) -> Optional[str]:
@@ -68,19 +50,16 @@ def upload_skill(api_key: str, client: Optional[Anthropic] = None) -> Optional[s
         import shutil
 
         temp_dir = Path(tempfile.mkdtemp())
-        files_list = []
 
         try:
             # Extract skill zip
             with zipfile.ZipFile(SKILL_PATH, 'r') as zip_ref:
                 zip_ref.extractall(temp_dir)
 
-            # Collect files from extracted directory
-            files_list = _collect_files_from_directory(temp_dir)
-
-            # Upload via Skills API
+            # Upload via Skills API using official SDK helper
             skill = client.beta.skills.create(
-                files=files_list,
+                display_title="Image to DOCX Converter",
+                files=files_from_dir(str(temp_dir)),
                 betas=["skills-2025-10-02"]
             )
 
@@ -88,12 +67,6 @@ def upload_skill(api_key: str, client: Optional[Anthropic] = None) -> Optional[s
             return skill.skill_id
 
         finally:
-            # Close all file handles
-            for _, file_handle in files_list:
-                try:
-                    file_handle.close()
-                except Exception:  # Don't catch SystemExit/KeyboardInterrupt
-                    pass
             # Clean up temp directory
             shutil.rmtree(temp_dir, ignore_errors=True)
 
