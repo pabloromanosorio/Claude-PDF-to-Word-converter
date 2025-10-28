@@ -120,24 +120,23 @@ class ConfigManager:
         default_settings = {
             'font': 'Arial',
             'fontSize': 12,
-            'margins': {
-                'top': 1.0,
-                'right': 1.0,
-                'bottom': 1.0,
-                'left': 1.0
-            },
+            'margin': 1.0,  # Single value for all sides
             'replaceSignatures': True,
             'addPageMarkers': True,
-            'model': 'claude-sonnet-4-5-20250929'
+            'model': 'claude-sonnet-4-5-20250929',
+            'customInstructions': ''
         }
 
         # Merge saved settings with defaults (saved settings override defaults)
         saved_settings = config.get('settings', {})
         merged = {**default_settings, **saved_settings}
 
-        # Handle nested margins dict separately
-        if 'margins' in saved_settings and isinstance(saved_settings['margins'], dict):
-            merged['margins'] = {**default_settings['margins'], **saved_settings['margins']}
+        # Migrate old margins format to new margin format
+        if 'margins' in merged and 'margin' not in saved_settings:
+            # Use top margin as the single value
+            old_margins = merged.pop('margins')
+            if isinstance(old_margins, dict):
+                merged['margin'] = old_margins.get('top', 1.0)
 
         return merged
 
