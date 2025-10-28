@@ -11,14 +11,59 @@ import os
 import base64
 import logging
 import tempfile
+import time
 from pathlib import Path
 from typing import Dict, Any, Optional, Callable
-from anthropic import Anthropic
+from anthropic import Anthropic, APIError
 from pypdf import PdfReader, PdfWriter
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def api_call_with_retry(func, max_retries=3, initial_delay=2):
+    """
+    Wrapper for API calls with exponential backoff retry logic
+
+    Args:
+        func: Function to call (should return API response)
+        max_retries: Maximum number of retry attempts
+        initial_delay: Initial delay in seconds (doubles each retry)
+
+    Returns:
+        API response if successful
+
+    Raises:
+        Last exception if all retries exhausted
+    """
+    delay = initial_delay
+
+    for attempt in range(max_retries + 1):
+        try:
+            return func()
+        except APIError as e:
+            # Check if it's a rate limit or overload error
+            error_code = getattr(e, 'status_code', None)
+
+            if error_code in [429, 529]:
+                if attempt < max_retries:
+                    logger.warning(f"API overload (status {error_code}), retrying in {delay}s...")
+                    time.sleep(delay)
+                    delay *= 2  # Exponential backoff
+                    continue
+                else:
+                    logger.error(f"Max retries exhausted after API overload")
+                    raise
+            else:
+                # Not a retryable error
+                raise
+        except Exception as e:
+            # Non-API errors don't get retried
+            raise
+
+    # Should never reach here
+    raise Exception("Retry logic failed unexpectedly")
 
 
 def build_prompt(settings: Dict[str, Any], file_name: str) -> str:
@@ -415,42 +460,45 @@ def convert_document_simple(
     if progress_callback:
         progress_callback({'status': 'analyzing', 'progress': 40})
 
-    # API call
+    # API call with retry logic
     logger.info(f"Calling Anthropic API with model {settings.get('model')}")
 
-    response = client.beta.messages.create(
-        model=settings.get('model', 'claude-sonnet-4-5-20250929'),
-        max_tokens=16000,
-        betas=['code-execution-2025-08-25', 'skills-2025-10-02', 'files-api-2025-04-14'],
-        container={
-            'skills': [{
-                'type': 'anthropic',
-                'skill_id': 'docx',
-                'version': 'latest'
-            }]
-        },
-        messages=[{
-            'role': 'user',
-            'content': [
-                {
-                    'type': 'document',
-                    'source': {
-                        'type': 'base64',
-                        'media_type': media_type,
-                        'data': file_base64
+    def make_api_call():
+        return client.beta.messages.create(
+            model=settings.get('model', 'claude-sonnet-4-5-20250929'),
+            max_tokens=16000,
+            betas=['code-execution-2025-08-25', 'skills-2025-10-02', 'files-api-2025-04-14'],
+            container={
+                'skills': [{
+                    'type': 'anthropic',
+                    'skill_id': 'docx',
+                    'version': 'latest'
+                }]
+            },
+            messages=[{
+                'role': 'user',
+                'content': [
+                    {
+                        'type': 'document',
+                        'source': {
+                            'type': 'base64',
+                            'media_type': media_type,
+                            'data': file_base64
+                        }
+                    },
+                    {
+                        'type': 'text',
+                        'text': prompt
                     }
-                },
-                {
-                    'type': 'text',
-                    'text': prompt
-                }
-            ]
-        }],
-        tools=[{
-            'type': 'code_execution_20250825',
-            'name': 'code_execution'
-        }]
-    )
+                ]
+            }],
+            tools=[{
+                'type': 'code_execution_20250825',
+                'name': 'code_execution'
+            }]
+        )
+
+    response = api_call_with_retry(make_api_call, max_retries=3, initial_delay=2)
 
     if progress_callback:
         progress_callback({'status': 'generating', 'progress': 70})
