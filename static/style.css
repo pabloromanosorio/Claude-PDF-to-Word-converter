@@ -386,3 +386,41 @@ main {
     background: #e0e0e0;
     cursor: not-allowed;
 }
+
+/* Prompt Editor */
+.prompt-editor {
+    margin: 20px 0;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 5px;
+}
+
+.prompt-editor h3 {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+#promptEditor {
+    width: 100%;
+    padding: 10px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    border: 1px solid var(--border-color);
+    border-radius: 3px;
+    resize: vertical;
+    margin-bottom: 10px;
+}
+
+.prompt-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.prompt-info {
+    font-size: 0.9em;
+    color: #666;
+    margin: 0;
+}

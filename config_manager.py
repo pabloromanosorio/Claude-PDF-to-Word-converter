@@ -154,3 +154,21 @@ class ConfigManager:
     def has_api_key(self) -> bool:
         """Check if API key is configured"""
         return self.get_api_key() is not None
+
+    def get_custom_prompt(self) -> Optional[str]:
+        """Get custom prompt if saved"""
+        config_file = self.config_dir / 'custom_prompt.txt'
+        if config_file.exists():
+            return config_file.read_text()
+        return None
+
+    def save_custom_prompt(self, prompt: str):
+        """Save custom prompt"""
+        config_file = self.config_dir / 'custom_prompt.txt'
+        config_file.write_text(prompt)
+
+    def delete_custom_prompt(self):
+        """Delete custom prompt"""
+        config_file = self.config_dir / 'custom_prompt.txt'
+        if config_file.exists():
+            config_file.unlink()

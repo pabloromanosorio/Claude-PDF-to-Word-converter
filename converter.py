@@ -353,8 +353,17 @@ def convert_document(
         media_type = get_media_type(file_path)
         file_name = Path(file_path).stem
 
-        # Build prompt
-        prompt = build_prompt(settings, file_name)
+        # Build prompt - use custom if available
+        from config_manager import ConfigManager
+        config_mgr = ConfigManager()
+        custom_prompt = config_mgr.get_custom_prompt()
+
+        if custom_prompt:
+            # Use custom prompt, but inject filename
+            prompt = custom_prompt.replace('{file_name}', file_name)
+        else:
+            # Use default prompt builder
+            prompt = build_prompt(settings, file_name)
 
         if progress_callback:
             progress_callback({'status': 'analyzing', 'progress': 30})

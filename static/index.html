@@ -137,6 +137,23 @@
                 <p id="pageCount" class="page-count"></p>
             </div>
 
+            <!-- Prompt Editor -->
+            <div class="prompt-editor">
+                <h3>Conversion Prompt
+                    <button id="togglePrompt" class="btn-secondary">Show/Edit</button>
+                </h3>
+                <div id="promptContainer" style="display:none;">
+                    <textarea id="promptEditor" rows="15"></textarea>
+                    <div class="prompt-actions">
+                        <button id="resetPrompt" class="btn-secondary">Reset to Default</button>
+                        <button id="savePrompt" class="btn-primary">Save Custom Prompt</button>
+                    </div>
+                    <p class="prompt-info">
+                        Custom prompt overrides default. Leave blank to use default prompt generation.
+                    </p>
+                </div>
+            </div>
+
             <!-- Convert Button -->
             <button id="convert-btn" class="btn-primary btn-large" disabled>Convert Document</button>
 

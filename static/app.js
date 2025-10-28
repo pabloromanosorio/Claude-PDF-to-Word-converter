@@ -100,6 +100,25 @@ function setupEventListeners() {
             }
         });
     });
+
+    // Prompt editor toggle
+    document.getElementById('togglePrompt').addEventListener('click', function() {
+        const container = document.getElementById('promptContainer');
+        const isVisible = container.style.display !== 'none';
+        container.style.display = isVisible ? 'none' : 'block';
+        this.textContent = isVisible ? 'Show/Edit' : 'Hide';
+
+        if (!isVisible) {
+            // Load current prompt when showing
+            loadPrompt();
+        }
+    });
+
+    // Save custom prompt
+    document.getElementById('savePrompt').addEventListener('click', saveCustomPrompt);
+
+    // Reset to default prompt
+    document.getElementById('resetPrompt').addEventListener('click', resetPrompt);
 }
 
 // API key save
@@ -321,6 +340,68 @@ function showSuccess(filename, cost) {
     document.getElementById('success-filename').textContent = filename;
     document.getElementById('success-cost').textContent = `Cost: $${cost.toFixed(4)}`;
     document.getElementById('success-container').classList.remove('hidden');
+}
+
+// Load prompt (default or custom)
+async function loadPrompt() {
+    try {
+        const response = await fetch('/api/prompt');
+        const data = await response.json();
+        document.getElementById('promptEditor').value = data.prompt;
+    } catch (error) {
+        console.error('Failed to load prompt:', error);
+        alert('Failed to load prompt');
+    }
+}
+
+// Save custom prompt
+async function saveCustomPrompt() {
+    const customPrompt = document.getElementById('promptEditor').value.trim();
+
+    if (!customPrompt) {
+        alert('Prompt cannot be empty');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/prompt', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({customPrompt: customPrompt})
+        });
+
+        if (response.ok) {
+            alert('Custom prompt saved successfully!');
+        } else {
+            alert('Failed to save prompt');
+        }
+    } catch (error) {
+        console.error('Failed to save prompt:', error);
+        alert('Failed to save prompt');
+    }
+}
+
+// Reset to default prompt
+async function resetPrompt() {
+    if (!confirm('Reset to default prompt? This will remove your custom prompt.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/prompt', {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            loadPrompt();
+            alert('Reset to default prompt');
+        } else {
+            alert('Failed to reset prompt');
+        }
+    } catch (error) {
+        console.error('Failed to reset prompt:', error);
+        alert('Failed to reset prompt');
+    }
 }
 
 // Initialize when page loads

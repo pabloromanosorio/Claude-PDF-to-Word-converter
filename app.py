@@ -116,6 +116,47 @@ def create_app(testing=False):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
+    @app.route('/api/prompt', methods=['GET'])
+    def get_prompt():
+        """Get current prompt (custom or default)"""
+        try:
+            custom_prompt = config_manager.get_custom_prompt()
+
+            if custom_prompt:
+                return jsonify({'prompt': custom_prompt, 'isCustom': True})
+            else:
+                # Generate default prompt with current settings
+                from converter import build_prompt
+                settings = config_manager.get_settings()
+                default_prompt = build_prompt(settings, 'example')
+                return jsonify({'prompt': default_prompt, 'isCustom': False})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/prompt', methods=['POST'])
+    def save_custom_prompt():
+        """Save custom prompt"""
+        try:
+            data = request.get_json()
+            custom_prompt = data.get('customPrompt', '').strip()
+
+            if custom_prompt:
+                config_manager.save_custom_prompt(custom_prompt)
+                return jsonify({'success': True})
+            else:
+                return jsonify({'error': 'Empty prompt'}), 400
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/prompt', methods=['DELETE'])
+    def delete_custom_prompt():
+        """Delete custom prompt (reset to default)"""
+        try:
+            config_manager.delete_custom_prompt()
+            return jsonify({'success': True})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
     @app.route('/api/page-count', methods=['POST'])
     def get_page_count():
         """Get PDF page count"""
