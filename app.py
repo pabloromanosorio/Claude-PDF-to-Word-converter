@@ -18,7 +18,7 @@ from flask import Flask, render_template, request, jsonify, send_file, send_from
 from werkzeug.utils import secure_filename
 
 from config_manager import ConfigManager
-from converter import upload_skill, convert_document
+from converter import convert_document
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -92,27 +92,6 @@ def create_app(testing=False):
 
             config_manager.save_api_key(api_key)
             return jsonify({'success': True})
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
-
-    @app.route('/api/skill-upload', methods=['POST'])
-    def upload_skill_to_account():
-        """Upload skill to user's Anthropic account"""
-        try:
-            api_key = config_manager.get_api_key()
-            if not api_key:
-                return jsonify({'error': 'API key not configured'}), 400
-
-            skill_id = upload_skill(api_key)
-
-            if skill_id:
-                config_manager.save_skill_id(skill_id)
-                return jsonify({'success': True, 'skillId': skill_id})
-            else:
-                return jsonify({
-                    'success': False,
-                    'error': 'Skill upload failed, will use embedded fallback'
-                })
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 

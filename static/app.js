@@ -159,26 +159,13 @@ async function saveApiKey() {
             throw new Error('Failed to save API key');
         }
 
-        statusEl.textContent = 'API key saved! Setting up converter (10 seconds)...';
-
-        // Upload skill to user's account
-        const skillResponse = await fetch('/api/skill-upload', {
-            method: 'POST'
-        });
-
-        const skillData = await skillResponse.json();
-
-        if (skillData.success) {
-            statusEl.textContent = 'Setup complete! Redirecting...';
-        } else {
-            statusEl.textContent = 'Setup complete! (Using embedded skill)';
-        }
+        statusEl.textContent = 'API key saved! Setup complete...';
 
         // Show main interface after short delay
         setTimeout(() => {
             showScreen('main-interface');
             loadSettings();
-        }, 1500);
+        }, 500);
 
     } catch (error) {
         errorEl.textContent = 'Error: ' + error.message;
