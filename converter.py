@@ -296,6 +296,10 @@ def convert_document(
             'model': settings.get('model', 'claude-sonnet-4-5-20250929'),
             'max_tokens': 16000,
             'betas': ['code-execution-2025-08-25', 'skills-2025-10-02'],
+            'tools': [{
+                'type': 'code_execution_20250825',
+                'name': 'code_execution'
+            }],
             'messages': [{
                 'role': 'user',
                 'content': [
@@ -324,10 +328,6 @@ def convert_document(
                     'version': 'latest'
                 }]
             }
-            messages_params['tools'] = [{
-                'type': 'code_execution_20250825',
-                'name': 'code_execution'
-            }]
 
         # Call API
         logger.info(f"Calling Anthropic API with model {settings.get('model')}")
