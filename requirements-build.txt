@@ -1,2 +1,0 @@
-# Build-time dependencies (in addition to requirements.txt)
-pyinstaller==6.3.0
