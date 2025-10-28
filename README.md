@@ -1,67 +1,77 @@
-# Image to Word Converter
+# PDF to Word Converter
 
-Convert document images (PDF, JPG, PNG) to professional, editable Word documents powered by Claude AI.
+Convert PDFs and images to editable Word documents using Claude AI.
 
-## Features
+## ✨ Features
 
-- Professional output (80-90% visual fidelity)
-- Optimized for translation workflows
-- CAT tool compatible
-- Easy installation (no technical knowledge required)
-- Encrypted API key storage
-- Cost tracking
-- Page selection for PDFs
+- 📄 Convert PDF, JPG, PNG to professional Word documents
+- 🎯 80-90% visual fidelity
+- 💰 Pay-as-you-go pricing (~$0.01-0.03 per page)
+- ⚡ Fast conversion (10-30 seconds)
+- 🔒 Secure - API key stored locally, encrypted
+- 🎨 Customizable fonts, margins, formatting
 
-## Installation
+## 🚀 Quick Start
 
-### Windows
-1. Download `ImageToWordConverter-Setup-1.0.0.exe`
-2. Double-click to install
-3. Launch from Desktop shortcut
+### For End Users (Easiest)
 
-### macOS
-1. Download `ImageToWordConverter-1.0.0.dmg`
-2. Open DMG, drag app to Applications
-3. Launch from Applications folder
+**Download the installer:**
+- **Windows:** [Download .exe](releases/latest) (coming soon)
+- **Mac:** [Download .dmg](releases/latest) (coming soon)
 
-## First-Time Setup
+Double-click to install, no technical knowledge required!
 
-1. Launch the app
-2. Click "Get API Key from Anthropic" (opens browser)
-3. Sign up/login at Anthropic
-4. Copy your API key
-5. Paste into app and click "Save"
-6. Start converting!
+See [DOWNLOAD_INSTRUCTIONS.md](DOWNLOAD_INSTRUCTIONS.md) for detailed steps.
 
-## Usage
+### For Developers
 
-1. Drag and drop a PDF, JPG, or PNG file
-2. Adjust settings (optional)
-3. Click "Convert"
-4. Wait for conversion (10-30 seconds)
-5. Open your Word document
+**Requirements:** Python 3.10+
 
-## Settings
+```bash
+# Clone repository
+git clone https://github.com/yourname/pdf-converter.git
+cd pdf-converter
 
-- **Font:** Choose output font (Arial, Calibri, etc.)
-- **Font Size:** Set base font size (12pt default)
-- **Margins:** Adjust document margins
-- **Replace Signatures:** Replace signature images with [Signature]
-- **Add Page Markers:** Add page reference markers for translation
+# Install dependencies
+pip install -r requirements.txt
 
-## Cost
+# Run app
+python app.py
+```
 
-Conversions cost $0.10-0.25 per document depending on:
-- Document complexity
-- Number of pages
-- Model selected (Haiku = faster/cheaper, Sonnet = better quality)
+Browser opens automatically to http://localhost:5000
 
-## Support
+## 💰 Pricing
 
-For issues or questions:
-- GitHub: [your-repo]
-- Email: [your-email]
+- **Per page:** ~$0.01-0.03
+- **1-page letter:** ~$0.02
+- **10-page contract:** ~$0.20
+- **100-page book:** ~$2.00
 
-## License
+No subscription. Pay only for what you convert through Anthropic.
+
+## 📖 Documentation
+
+- [Download Instructions](DOWNLOAD_INSTRUCTIONS.md) - For end users
+- [API Key Guide](docs/API_KEY_GUIDE.md) - How to get your Anthropic API key
+- [Billing Info](docs/BILLING_INFO.md) - Understanding pay-as-you-go costs
+- [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues & solutions
+
+## 🔧 Development
+
+```bash
+# Run tests
+pytest tests/ -v
+
+# Build installers (requires PyInstaller)
+python build_installer.py
+```
+
+## 📝 License
 
 MIT
+
+## 💬 Support
+
+- Issues: [GitHub Issues](issues)
+- Questions: [GitHub Discussions](discussions)
