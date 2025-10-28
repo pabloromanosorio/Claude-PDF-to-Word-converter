@@ -1,6 +1,40 @@
 # Download & Installation Instructions
 
-## Windows Users
+## Quick Start (For GitHub Users)
+
+If you cloned/downloaded from GitHub, use these launcher scripts:
+
+### Mac/Linux Users
+1. Navigate to the project folder
+2. **Double-click** `START_APP.sh`
+3. Browser opens automatically at http://localhost:5000
+
+First launch will automatically:
+- Create virtual environment
+- Install all dependencies
+- Take ~30 seconds
+
+Subsequent launches are instant!
+
+### Windows Users
+1. Navigate to the project folder
+2. **Double-click** `START_APP.bat`
+3. Browser opens automatically at http://localhost:5000
+
+First launch will automatically:
+- Create virtual environment
+- Install all dependencies
+- Take ~30 seconds
+
+Subsequent launches are instant!
+
+**Alternative:** Run manually with `python app.py` (requires manual venv setup)
+
+---
+
+## Standalone Installers (Coming Soon)
+
+### Windows Users
 
 1. **Click this link:** [Download for Windows](releases/latest/PDF_Converter_Windows.exe)
 2. **Wait for download** (file: PDF_Converter_Windows.exe, ~55 MB)
