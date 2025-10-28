@@ -1,12 +1,11 @@
-"""
-PDF to Word converter using Anthropic Skills API.
+"PDF to Word converter using Anthropic Skills API.
 
 This module handles:
 - Uploading custom skills to user's Anthropic account
 - Converting documents via Skills API
 - Page extraction from PDFs
 - Cost calculation
-"""
+"
 
 import os
 import base64
@@ -23,6 +22,7 @@ from anthropic.lib import files_from_dir
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 # Skill package path
 SKILL_PATH = Path(__file__).parent / 'image-to-docx-converter.zip'
 
@@ -30,6 +30,7 @@ SKILL_PATH = Path(__file__).parent / 'image-to-docx-converter.zip'
 def upload_skill(api_key: str, client: Optional[Anthropic] = None) -> Optional[str]:
     """
     Upload image-to-docx-converter skill to user's Anthropic account.
+    If skill already exists, returns the existing skill_id.
 
     Args:
         api_key: Anthropic API key
@@ -42,14 +43,31 @@ def upload_skill(api_key: str, client: Optional[Anthropic] = None) -> Optional[s
         if client is None:
             client = Anthropic(api_key=api_key)
 
-        logger.info("Uploading skill to Anthropic...")
+        # First, check if skill already exists
+        logger.info("Checking for existing skill...")
+        try:
+            skills_list = client.beta.skills.list(betas=["skills-2025-10-02"], source="custom")
+            logger.info(f"Found {len(skills_list.data)} custom skills")
+            for skill in skills_list.data:
+                logger.info(f"Skill: {skill.id}, display_title={getattr(skill, 'display_title', 'N/A')}")
+                # Check if this is our skill (by display title)
+                if hasattr(skill, 'display_title') and skill.display_title == "Image to DOCX Converter":
+                    logger.info(f"Found existing skill with matching title: {skill.id}")
+                    return skill.id
+        except Exception as e:
+            logger.warning(f"Could not list skills: {e}")
+
+        logger.info("Uploading new skill to Anthropic...")
 
         # Extract skill to temp directory for upload
         import zipfile
         import tempfile
         import shutil
 
-        temp_dir = Path(tempfile.mkdtemp())
+        # Create temp dir with skill name (API requirement)
+        temp_base = Path(tempfile.mkdtemp())
+        temp_dir = temp_base / 'image-to-docx-converter'
+        temp_dir.mkdir()
 
         try:
             # Extract skill zip
@@ -63,12 +81,14 @@ def upload_skill(api_key: str, client: Optional[Anthropic] = None) -> Optional[s
                 betas=["skills-2025-10-02"]
             )
 
-            logger.info(f"Skill uploaded successfully: {skill.skill_id}")
-            return skill.skill_id
+            # The response has 'id' not 'skill_id'
+            skill_id = skill.id
+            logger.info(f"Skill uploaded successfully: {skill_id}")
+            return skill_id
 
         finally:
             # Clean up temp directory
-            shutil.rmtree(temp_dir, ignore_errors=True)
+            shutil.rmtree(temp_base, ignore_errors=True)
 
     except Exception as e:
         logger.error(f"Skill upload failed: {e}")
@@ -192,6 +212,48 @@ def get_media_type(file_path: str) -> str:
     return media_types.get(ext, 'application/pdf')
 
 
+def extract_pages(pdf_path: str, page_range: str) -> str:
+    """
+    Extract specific pages from PDF
+
+    Args:
+        pdf_path: Path to PDF file
+        page_range: Range string like "1-5, 7, 9-12" or empty for all
+
+    Returns:
+        Path to extracted PDF (or original if all pages)
+    """
+    if not page_range or page_range.strip() == '':
+        return pdf_path
+
+    from pypdf import PdfReader, PdfWriter
+
+    reader = PdfReader(pdf_path)
+    writer = PdfWriter()
+
+    # Parse page range
+    pages_to_extract = set()
+    for part in page_range.split(','):
+        part = part.strip()
+        if '-' in part:
+            start, end = part.split('-')
+            pages_to_extract.update(range(int(start)-1, int(end)))  # Convert to 0-indexed
+        else:
+            pages_to_extract.add(int(part)-1)  # Convert to 0-indexed
+
+    # Extract pages
+    for page_num in sorted(pages_to_extract):
+        if page_num < len(reader.pages):
+            writer.add_page(reader.pages[page_num])
+
+    # Save extracted PDF
+    output_path = pdf_path.replace('.pdf', '_extracted.pdf')
+    with open(output_path, 'wb') as f:
+        writer.write(f)
+
+    return output_path
+
+
 def extract_code_from_response(response_text: str) -> Optional[str]:
     """Extract JavaScript code from API response"""
     import re
@@ -250,6 +312,7 @@ def convert_document(
     file_path: str,
     settings: Dict[str, Any],
     api_key: str,
+    page_range: str = '',
     skill_id: Optional[str] = None,
     progress_callback: Optional[Callable] = None,
     client: Optional[Anthropic] = None
@@ -261,6 +324,7 @@ def convert_document(
         file_path: Path to PDF or image file
         settings: User settings (font, margins, model, etc.)
         api_key: Anthropic API key
+        page_range: Page range for PDFs (e.g., "1-5, 7")
         skill_id: Optional skill ID (will use embedded if None)
         progress_callback: Optional callback(dict) for progress updates
         client: Optional pre-configured client (for testing)
@@ -275,6 +339,10 @@ def convert_document(
     try:
         if progress_callback:
             progress_callback({'status': 'preparing', 'progress': 10})
+
+        # Extract pages if range specified
+        if page_range and file_path.endswith('.pdf'):
+            file_path = extract_pages(file_path, page_range)
 
         # Initialize client
         if client is None:
@@ -336,15 +404,107 @@ def convert_document(
         if progress_callback:
             progress_callback({'status': 'generating', 'progress': 70})
 
-        # Extract code
+        # Extract code - check text blocks, tool_use, and code execution results
         response_text = ''
-        for block in response.content:
+        code_from_tool = None
+        text_editor_file_content = None
+
+        logger.info(f"Response content blocks: {len(response.content)}")
+        for i, block in enumerate(response.content):
+            logger.info(f"Block {i} type: {block.type}")
+
             if hasattr(block, 'text'):
                 response_text += block.text
+                logger.info(f"Got text block, length: {len(block.text)}")
 
+            # Check for server_tool_use blocks (code execution tools)
+            if block.type == 'server_tool_use' and hasattr(block, 'input'):
+                tool_name = getattr(block, 'name', '')
+                logger.info(f"Server tool use block found: {tool_name}")
+
+                # Check if it's a text editor tool (where code is written)
+                if 'text_editor' in tool_name:
+                    # Log the input attributes
+                    logger.info(f"Text editor input attributes: {dir(block.input)}")
+
+                    # Try various possible attribute names
+                    if hasattr(block.input, 'file_text'):
+                        code_from_tool = block.input.file_text
+                        logger.info(f"Got code from text_editor.file_text, length: {len(code_from_tool)}")
+                    elif hasattr(block.input, 'content'):
+                        code_from_tool = block.input.content
+                        logger.info(f"Got code from text_editor.content, length: {len(code_from_tool)}")
+                    elif hasattr(block.input, 'new_str'):
+                        code_from_tool = block.input.new_str
+                        logger.info(f"Got code from text_editor.new_str, length: {len(code_from_tool)}")
+
+            # Check for regular tool_use blocks (legacy)
+            elif block.type == 'tool_use' and hasattr(block, 'input'):
+                logger.info(f"Tool use block found: {block.name}")
+                if hasattr(block.input, 'code'):
+                    code_from_tool = block.input.code
+                    logger.info("Got code from tool_use block")
+
+            # Check tool result blocks for file content
+            elif block.type == 'text_editor_code_execution_tool_result':
+                logger.info("Found text_editor result block")
+                # Log attributes
+                if hasattr(block, '__dict__'):
+                    logger.info(f"Result block attributes: {list(block.__dict__.keys())}")
+
+                # Try to get file content from result
+                if hasattr(block, 'content'):
+                    content = block.content
+                    logger.info(f"Result content type: {type(content)}")
+                    logger.info(f"Result content dir: {[a for a in dir(content) if not a.startswith('_')]}")
+
+                    # The SDK object has nested content attribute
+                    if hasattr(content, 'content'):
+                        nested_content = content.content
+                        logger.info(f"Found nested content, type: {type(nested_content)}")
+                        if isinstance(nested_content, str):
+                            text_editor_file_content = nested_content
+                            logger.info(f"Got file content from result.content.content (string), length: {len(text_editor_file_content)}")
+                    # Try to get file_text attribute (common in SDK objects)
+                    elif hasattr(content, 'file_text'):
+                        text_editor_file_content = content.file_text
+                        logger.info(f"Got file content from result.content.file_text, length: {len(text_editor_file_content)}")
+                    # Content might be a list of content blocks
+                    elif isinstance(content, list):
+                        for item in content:
+                            logger.info(f"Content item type: {type(item)}, has text: {hasattr(item, 'text')}")
+                            if hasattr(item, 'text'):
+                                text_editor_file_content = item.text
+                                logger.info(f"Got file content from result.content[].text, length: {len(text_editor_file_content)}")
+                                break
+                    elif hasattr(content, 'text'):
+                        text_editor_file_content = content.text
+                        logger.info(f"Got file content from result.content.text, length: {len(text_editor_file_content)}")
+                    elif isinstance(content, str):
+                        text_editor_file_content = content
+                        logger.info(f"Got file content from result.content (string), length: {len(text_editor_file_content)}")
+
+            elif 'code_execution_tool_result' in block.type:
+                logger.info(f"Tool result block: {block.type}")
+
+        # Try to extract code from text response first
         code = extract_code_from_response(response_text)
 
+        # If no code in text, try code from tool input
+        if not code and code_from_tool:
+            code = code_from_tool
+            logger.info("Using code from tool execution input block")
+
+        # If still no code, try file content from text_editor result
+        if not code and text_editor_file_content:
+            code = text_editor_file_content
+            logger.info("Using code from text_editor result block")
+
         if not code:
+            logger.error(f"No code found. Response had {len(response_text)} chars of text")
+            logger.error(f"First 500 chars of response: {response_text[:500]}")
+            # Log all block types for debugging
+            logger.error(f"All block types: {[b.type for b in response.content]}")
             return {
                 'success': False,
                 'error': 'No code generated in response'

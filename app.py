@@ -9,6 +9,7 @@ Serves browser-based UI and provides API endpoints for:
 """
 
 import os
+import tempfile
 import logging
 import webbrowser
 from threading import Timer
@@ -115,6 +116,34 @@ def create_app(testing=False):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
+    @app.route('/api/page-count', methods=['POST'])
+    def get_page_count():
+        """Get PDF page count"""
+        try:
+            if 'file' not in request.files:
+                return jsonify({'error': 'No file uploaded'}), 400
+
+            file = request.files['file']
+            if not file.filename.endswith('.pdf'):
+                return jsonify({'error': 'Not a PDF file'}), 400
+
+            # Save temporarily
+            temp_path = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf').name
+            file.save(temp_path)
+
+            # Get page count
+            from pypdf import PdfReader
+            reader = PdfReader(temp_path)
+            page_count = len(reader.pages)
+
+            os.unlink(temp_path)
+
+            return jsonify({'pageCount': page_count})
+
+        except Exception as e:
+            logger.error(f"Page count error: {e}")
+            return jsonify({'error': str(e)}), 500
+
     @app.route('/api/convert', methods=['POST'])
     def convert_file():
         """Convert uploaded file to Word"""
@@ -139,11 +168,15 @@ def create_app(testing=False):
             if not api_key:
                 return jsonify({'error': 'API key not configured'}), 400
 
+            # Get page range if provided
+            page_range = request.form.get('pageRange', '')
+
             # Convert
             result = convert_document(
                 str(file_path),
                 settings,
                 api_key,
+                page_range=page_range,
                 skill_id=skill_id
             )
 

@@ -119,6 +119,24 @@
                 <button id="clear-file-btn" class="btn-text">Clear</button>
             </div>
 
+            <!-- Page Selection -->
+            <div id="page-selector" class="page-selector hidden">
+                <h3>Page Selection</h3>
+                <div class="form-group">
+                    <label>
+                        <input type="radio" name="pageMode" value="all" checked> All pages
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="radio" name="pageMode" value="range"> Specific pages/ranges
+                    </label>
+                    <input type="text" id="pageRange" placeholder="e.g., 1-5, 7, 9-12" disabled>
+                    <small>Format: 1-5, 7, 9-12 (comma-separated ranges)</small>
+                </div>
+                <p id="pageCount" class="page-count"></p>
+            </div>
+
             <!-- Convert Button -->
             <button id="convert-btn" class="btn-primary btn-large" disabled>Convert Document</button>
 

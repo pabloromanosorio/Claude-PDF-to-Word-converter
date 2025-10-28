@@ -89,6 +89,17 @@ function setupEventListeners() {
         clearSelectedFile();
         document.getElementById('success-container').classList.add('hidden');
     });
+
+    // Page range input enable/disable
+    document.querySelectorAll('input[name="pageMode"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const rangeInput = document.getElementById('pageRange');
+            rangeInput.disabled = this.value === 'all';
+            if (this.value === 'all') {
+                rangeInput.value = '';
+            }
+        });
+    });
 }
 
 // API key save
@@ -177,7 +188,7 @@ async function loadUsageStats() {
 }
 
 // Handle file selection
-function handleFileSelect(file) {
+async function handleFileSelect(file) {
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
 
     if (!allowedTypes.includes(file.type)) {
@@ -193,14 +204,44 @@ function handleFileSelect(file) {
 
     // Enable convert button
     document.getElementById('convert-btn').disabled = false;
+
+    // Show page selector for PDFs
+    if (file.type === 'application/pdf') {
+        document.getElementById('page-selector').classList.remove('hidden');
+
+        // Get page count from backend
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/api/page-count', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            document.getElementById('pageCount').textContent = `Total pages: ${data.pageCount}`;
+        } catch (error) {
+            console.error('Failed to get page count:', error);
+        }
+    } else {
+        // Hide page selector for images
+        document.getElementById('page-selector').classList.add('hidden');
+    }
 }
 
 // Clear selected file
 function clearSelectedFile() {
     selectedFile = null;
     document.getElementById('selected-file').classList.add('hidden');
+    document.getElementById('page-selector').classList.add('hidden');
     document.getElementById('convert-btn').disabled = true;
     document.getElementById('file-input').value = '';
+
+    // Reset page selection
+    document.querySelector('input[name="pageMode"][value="all"]').checked = true;
+    document.getElementById('pageRange').value = '';
+    document.getElementById('pageRange').disabled = true;
 }
 
 // Convert document
@@ -225,6 +266,15 @@ async function convertDocument() {
         const formData = new FormData();
         formData.append('file', selectedFile);
         formData.append('settings', JSON.stringify(settings));
+
+        // Add page range if specified
+        const pageMode = document.querySelector('input[name="pageMode"]:checked')?.value;
+        if (pageMode === 'range') {
+            const pageRange = document.getElementById('pageRange').value.trim();
+            if (pageRange) {
+                formData.append('pageRange', pageRange);
+            }
+        }
 
         // Send to server
         const response = await fetch('/api/convert', {
