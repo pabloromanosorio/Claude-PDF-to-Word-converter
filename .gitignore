@@ -33,3 +33,13 @@ installers/
 # Node (if any remain)
 node_modules/
 package-lock.json
+
+# Temporary files
+temp_skill/
+.genkit/
+*_extracted.pdf
+*_batch_*.pdf
+
+# Old backups
+*-OLD.zip
+*.bak
