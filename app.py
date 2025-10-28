@@ -157,6 +157,37 @@ def create_app(testing=False):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
+    @app.route('/api/estimate-cost', methods=['POST'])
+    def estimate_cost():
+        """Estimate cost before conversion"""
+        try:
+            if 'file' not in request.files:
+                return jsonify({'error': 'No file uploaded'}), 400
+
+            file = request.files['file']
+            settings = config_manager.get_settings()
+            page_range = request.form.get('pageRange', '')
+
+            # Save file temporarily
+            temp_path = tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename).suffix).name
+            file.save(temp_path)
+
+            # Calculate estimate
+            from cost_calculator import estimate_cost_for_file
+            estimate = estimate_cost_for_file(
+                temp_path,
+                settings.get('model', 'claude-sonnet-4-5-20250929'),
+                page_range
+            )
+
+            os.unlink(temp_path)
+
+            return jsonify(estimate)
+
+        except Exception as e:
+            logger.error(f"Cost estimation error: {e}")
+            return jsonify({'error': str(e)}), 500
+
     @app.route('/api/page-count', methods=['POST'])
     def get_page_count():
         """Get PDF page count"""
@@ -222,17 +253,36 @@ def create_app(testing=False):
             )
 
             if result['success']:
-                # Return the file
-                return send_file(
-                    result['output_path'],
-                    as_attachment=True,
-                    download_name=Path(result['output_path']).name
-                )
+                # Return JSON with cost and download info
+                filename = Path(result['output_path']).name
+                return jsonify({
+                    'success': True,
+                    'filename': filename,
+                    'actual_cost': result.get('cost', 0),
+                    'download_url': f"/api/download/{filename}"
+                })
             else:
                 return jsonify({'error': result.get('error', 'Conversion failed')}), 500
 
         except Exception as e:
             logger.error(f"Conversion error: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/download/<filename>')
+    def download_file(filename):
+        """Download converted file"""
+        try:
+            file_path = app.config['UPLOAD_FOLDER'] / filename
+            if file_path.exists():
+                return send_file(
+                    file_path,
+                    as_attachment=True,
+                    download_name=filename
+                )
+            else:
+                return jsonify({'error': 'File not found'}), 404
+        except Exception as e:
+            logger.error(f"Download error: {e}")
             return jsonify({'error': str(e)}), 500
 
     return app

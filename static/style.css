@@ -424,3 +424,39 @@ main {
     color: #666;
     margin: 0;
 }
+
+/* Cost Display */
+.cost-display {
+    background: #e8f5e9;
+    padding: 15px;
+    border-radius: 5px;
+    margin: 15px 0;
+    border-left: 4px solid #4caf50;
+}
+
+.cost-display h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #2e7d32;
+}
+
+.cost-display p {
+    margin: 5px 0;
+    font-size: 0.95em;
+}
+
+.cost-display.actual-cost {
+    background: #e3f2fd;
+    border-left-color: #2196f3;
+}
+
+.cost-display.actual-cost h4 {
+    color: #1565c0;
+}
+
+.cost-value {
+    font-size: 1.5em !important;
+    font-weight: bold;
+    color: #1b5e20;
+    margin: 10px 0 !important;
+}

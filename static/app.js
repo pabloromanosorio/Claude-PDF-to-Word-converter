@@ -98,8 +98,13 @@ function setupEventListeners() {
             if (this.value === 'all') {
                 rangeInput.value = '';
             }
+            // Update cost when page mode changes
+            updateCostEstimate();
         });
     });
+
+    // Update cost when page range changes
+    document.getElementById('pageRange').addEventListener('input', debounce(updateCostEstimate, 500));
 
     // Prompt editor toggle
     document.getElementById('togglePrompt').addEventListener('click', function() {
@@ -247,6 +252,9 @@ async function handleFileSelect(file) {
         // Hide page selector for images
         document.getElementById('page-selector').classList.add('hidden');
     }
+
+    // Update cost estimate
+    updateCostEstimate();
 }
 
 // Clear selected file
@@ -306,19 +314,22 @@ async function convertDocument() {
             throw new Error(error.error || 'Conversion failed');
         }
 
+        const result = await response.json();
+
         updateProgress('Conversion complete!', 100);
 
         // Download file
-        const blob = await response.blob();
+        const downloadResponse = await fetch(result.download_url);
+        const blob = await downloadResponse.blob();
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = selectedFile.name.replace(/\.[^/.]+$/, '.docx');
+        a.download = result.filename;
         a.click();
         window.URL.revokeObjectURL(url);
 
-        // Show success
-        showSuccess(a.download, 0.15); // TODO: Get actual cost from response
+        // Show success with actual cost
+        showSuccess(result.filename, result.actual_cost);
 
     } catch (error) {
         alert('Conversion failed: ' + error.message);
@@ -340,6 +351,10 @@ function showSuccess(filename, cost) {
     document.getElementById('success-filename').textContent = filename;
     document.getElementById('success-cost').textContent = `Cost: $${cost.toFixed(4)}`;
     document.getElementById('success-container').classList.remove('hidden');
+
+    // Show actual cost
+    document.getElementById('actualCostValue').textContent = cost.toFixed(4);
+    document.getElementById('actualCost').style.display = 'block';
 }
 
 // Load prompt (default or custom)
@@ -402,6 +417,50 @@ async function resetPrompt() {
         console.error('Failed to reset prompt:', error);
         alert('Failed to reset prompt');
     }
+}
+
+// Update cost estimate
+async function updateCostEstimate() {
+    if (!selectedFile) return;
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    // Add page range if specified
+    const pageMode = document.querySelector('input[name="pageMode"]:checked')?.value;
+    if (pageMode === 'range') {
+        const pageRange = document.getElementById('pageRange').value.trim();
+        if (pageRange) {
+            formData.append('pageRange', pageRange);
+        }
+    }
+
+    try {
+        const response = await fetch('/api/estimate-cost', {
+            method: 'POST',
+            body: formData
+        });
+
+        const estimate = await response.json();
+
+        // Display estimate
+        document.getElementById('estPages').textContent = estimate.page_count;
+        document.getElementById('estLow').textContent = estimate.estimated_cost_low.toFixed(4);
+        document.getElementById('estAvg').textContent = estimate.estimated_cost_avg.toFixed(4);
+        document.getElementById('estHigh').textContent = estimate.estimated_cost_high.toFixed(4);
+        document.getElementById('costEstimate').style.display = 'block';
+    } catch (error) {
+        console.error('Failed to estimate cost:', error);
+    }
+}
+
+// Debounce helper
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
 }
 
 // Initialize when page loads

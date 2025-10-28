@@ -154,8 +154,23 @@
                 </div>
             </div>
 
+            <!-- Cost Estimate -->
+            <div id="costEstimate" class="cost-display" style="display:none;">
+                <h4>Estimated Cost</h4>
+                <p>Pages to convert: <span id="estPages">0</span></p>
+                <p>Low estimate: $<span id="estLow">0.00</span></p>
+                <p>Average estimate: $<span id="estAvg">0.00</span></p>
+                <p>High estimate: $<span id="estHigh">0.00</span></p>
+            </div>
+
             <!-- Convert Button -->
             <button id="convert-btn" class="btn-primary btn-large" disabled>Convert Document</button>
+
+            <!-- Actual Cost -->
+            <div id="actualCost" class="cost-display actual-cost" style="display:none;">
+                <h4>Actual Cost</h4>
+                <p class="cost-value">$<span id="actualCostValue">0.00</span></p>
+            </div>
 
             <!-- Progress Display -->
             <div id="progress-container" class="progress-container hidden">

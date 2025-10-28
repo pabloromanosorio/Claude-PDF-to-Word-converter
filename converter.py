@@ -533,7 +533,8 @@ def convert_document(
             progress_callback({'status': 'complete', 'progress': 100})
 
         # Calculate cost
-        cost = calculate_cost(
+        from cost_calculator import calculate_actual_cost
+        cost = calculate_actual_cost(
             {
                 'input_tokens': response.usage.input_tokens,
                 'output_tokens': response.usage.output_tokens
