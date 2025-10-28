@@ -1,0 +1,280 @@
+// State management
+let selectedFile = null;
+let hasApiKey = false;
+
+// Screen management
+function showScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(screen => {
+        screen.classList.add('hidden');
+    });
+    document.getElementById(screenId).classList.remove('hidden');
+}
+
+// Initialize app
+async function initializeApp() {
+    console.log('Initializing app...');
+
+    // Check if API key is configured
+    try {
+        const response = await fetch('/api/api-key');
+        const data = await response.json();
+        hasApiKey = data.hasApiKey;
+
+        if (hasApiKey) {
+            showScreen('main-interface');
+            loadSettings();
+            loadUsageStats();
+        } else {
+            showScreen('welcome-screen');
+        }
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showScreen('welcome-screen');
+    }
+}
+
+// Event listeners setup
+function setupEventListeners() {
+    // Welcome screen
+    document.getElementById('get-started-btn').addEventListener('click', () => {
+        showScreen('api-key-screen');
+    });
+
+    // API key setup
+    document.getElementById('open-anthropic-btn').addEventListener('click', () => {
+        window.open('https://console.anthropic.com/settings/keys', '_blank');
+    });
+
+    document.getElementById('save-api-key-btn').addEventListener('click', saveApiKey);
+
+    // File selection
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+
+    dropZone.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+
+    // Drag and drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('drag-over');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('drag-over');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('drag-over');
+
+        if (e.dataTransfer.files.length > 0) {
+            handleFileSelect(e.dataTransfer.files[0]);
+        }
+    });
+
+    // Convert button
+    document.getElementById('convert-btn').addEventListener('click', convertDocument);
+
+    // Clear file button
+    document.getElementById('clear-file-btn').addEventListener('click', clearSelectedFile);
+
+    // Convert another button
+    document.getElementById('convert-another-btn').addEventListener('click', () => {
+        clearSelectedFile();
+        document.getElementById('success-container').classList.add('hidden');
+    });
+}
+
+// API key save
+async function saveApiKey() {
+    const apiKeyInput = document.getElementById('api-key-input');
+    const errorEl = document.getElementById('api-key-error');
+    const statusEl = document.getElementById('api-key-status');
+    const saveBtn = document.getElementById('save-api-key-btn');
+
+    const apiKey = apiKeyInput.value.trim();
+
+    // Validate format
+    if (!apiKey.startsWith('sk-ant-')) {
+        errorEl.textContent = 'Invalid API key format. Should start with sk-ant-';
+        errorEl.classList.remove('hidden');
+        return;
+    }
+
+    errorEl.classList.add('hidden');
+    statusEl.textContent = 'Saving API key...';
+    statusEl.classList.remove('hidden');
+    saveBtn.disabled = true;
+
+    try {
+        // Save API key
+        const response = await fetch('/api/api-key', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({apiKey})
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to save API key');
+        }
+
+        statusEl.textContent = 'API key saved! Setting up converter (10 seconds)...';
+
+        // Upload skill to user's account
+        const skillResponse = await fetch('/api/skill-upload', {
+            method: 'POST'
+        });
+
+        const skillData = await skillResponse.json();
+
+        if (skillData.success) {
+            statusEl.textContent = 'Setup complete! Redirecting...';
+        } else {
+            statusEl.textContent = 'Setup complete! (Using embedded skill)';
+        }
+
+        // Show main interface after short delay
+        setTimeout(() => {
+            showScreen('main-interface');
+            loadSettings();
+        }, 1500);
+
+    } catch (error) {
+        errorEl.textContent = 'Error: ' + error.message;
+        errorEl.classList.remove('hidden');
+        statusEl.classList.add('hidden');
+    } finally {
+        saveBtn.disabled = false;
+    }
+}
+
+// Load settings from server
+async function loadSettings() {
+    try {
+        const response = await fetch('/api/settings');
+        const settings = await response.json();
+
+        // Apply to UI
+        document.getElementById('model-select').value = settings.model;
+        document.getElementById('page-markers-check').checked = settings.addPageMarkers;
+        document.getElementById('replace-signatures-check').checked = settings.replaceSignatures;
+    } catch (error) {
+        console.error('Failed to load settings:', error);
+    }
+}
+
+// Load usage statistics
+async function loadUsageStats() {
+    // TODO: Implement if we add usage tracking
+    document.getElementById('total-conversions').textContent = '0';
+    document.getElementById('total-cost').textContent = '0.00';
+}
+
+// Handle file selection
+function handleFileSelect(file) {
+    const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+
+    if (!allowedTypes.includes(file.type)) {
+        alert('Please select a PDF, JPG, or PNG file');
+        return;
+    }
+
+    selectedFile = file;
+
+    // Show selected file
+    document.getElementById('selected-file-name').textContent = file.name;
+    document.getElementById('selected-file').classList.remove('hidden');
+
+    // Enable convert button
+    document.getElementById('convert-btn').disabled = false;
+}
+
+// Clear selected file
+function clearSelectedFile() {
+    selectedFile = null;
+    document.getElementById('selected-file').classList.add('hidden');
+    document.getElementById('convert-btn').disabled = true;
+    document.getElementById('file-input').value = '';
+}
+
+// Convert document
+async function convertDocument() {
+    if (!selectedFile) return;
+
+    // Get settings from UI
+    const settings = {
+        model: document.getElementById('model-select').value,
+        addPageMarkers: document.getElementById('page-markers-check').checked,
+        replaceSignatures: document.getElementById('replace-signatures-check').checked
+    };
+
+    // Show progress
+    document.getElementById('progress-container').classList.remove('hidden');
+    document.getElementById('convert-btn').disabled = true;
+
+    updateProgress('Uploading file...', 10);
+
+    try {
+        // Create form data
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('settings', JSON.stringify(settings));
+
+        // Send to server
+        const response = await fetch('/api/convert', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Conversion failed');
+        }
+
+        updateProgress('Conversion complete!', 100);
+
+        // Download file
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = selectedFile.name.replace(/\.[^/.]+$/, '.docx');
+        a.click();
+        window.URL.revokeObjectURL(url);
+
+        // Show success
+        showSuccess(a.download, 0.15); // TODO: Get actual cost from response
+
+    } catch (error) {
+        alert('Conversion failed: ' + error.message);
+        document.getElementById('progress-container').classList.add('hidden');
+        document.getElementById('convert-btn').disabled = false;
+    }
+}
+
+// Update progress display
+function updateProgress(status, percent) {
+    document.getElementById('progress-status').textContent = status;
+    document.getElementById('progress-fill').style.width = percent + '%';
+    document.getElementById('progress-fill').textContent = Math.round(percent) + '%';
+}
+
+// Show success message
+function showSuccess(filename, cost) {
+    document.getElementById('progress-container').classList.add('hidden');
+    document.getElementById('success-filename').textContent = filename;
+    document.getElementById('success-cost').textContent = `Cost: $${cost.toFixed(4)}`;
+    document.getElementById('success-container').classList.remove('hidden');
+}
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    setupEventListeners();
+    initializeApp();
+});
