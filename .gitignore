@@ -46,3 +46,4 @@ temp_skill/
 v2/.env
 v2/venv/
 v2/data/
+v2/build_env/
