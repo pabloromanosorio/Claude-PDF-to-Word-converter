@@ -43,3 +43,6 @@ temp_skill/
 # Old backups
 *-OLD.zip
 *.bak
+v2/.env
+v2/venv/
+v2/data/
