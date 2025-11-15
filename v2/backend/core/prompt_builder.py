@@ -23,71 +23,49 @@ def build_conversion_prompt(settings: ConversionSettings, filename: str) -> str:
         Optimized prompt string
     """
 
-    # Base prompt - CRITICAL: Emphasize ALL pages
-    prompt = f"""Convert this ENTIRE document (ALL PAGES) to Word (.docx) format.
+    # Base prompt - Let docx skill do its thing, but be comprehensive
+    prompt = f"""Convert this ENTIRE document (ALL PAGES) to Word (.docx) format using the docx skill.
 
-**CRITICAL: Process every single page of this document - do not stop after page 1.**
+**CRITICAL: Process every single page - do not stop after page 1.**
 
-**Primary Goal:**
+**Be Comprehensive:**
+- Include ALL text: body, headers, footers, sidebars, captions, footnotes
+- Include ALL pages from start to finish
+- Don't skip or summarize anything
 """
 
-    # NO CONTRADICTION: Either preserve original OR apply custom formatting
+    # Only override if user explicitly wants it
     if settings.override_formatting:
-        prompt += f"""Apply these specific formatting settings to all content:
+        prompt += f"""
+**Apply Custom Formatting:**
 - Font: {settings.font} {settings.font_size}pt
 - Margins: Top {settings.margin_top}", Bottom {settings.margin_bottom}", Left {settings.margin_left}", Right {settings.margin_right}"
-- Reformat the entire document with these settings
-- Extract all text and restructure with new formatting
-"""
-    else:
-        prompt += """Match the original document as closely as possible:
-- Keep the EXACT same fonts, sizes, and styles from the original
-- Preserve the ORIGINAL margins, alignment, and spacing
-- Maintain the ORIGINAL visual layout
-- Don't change any formatting - copy it exactly
 """
 
     prompt += f"""
-- Filename: {filename}.docx
-
-**Text and Structure:**
-- Copy all text exactly as shown (verbatim)
-- Maintain exact table structures
+**Output:** {filename}.docx
 """
 
-    # Table-specific instructions (CRITICAL for complex documents)
-    if settings.preserve_table_formatting:
-        prompt += """
-**Table Handling:**
-- Preserve exact table structure, borders, and gridlines
-- Maintain column widths and row heights from original
-- Keep merged cells intact
-- Preserve cell alignment and padding
-- Maintain nested tables if present
-- Copy all formatting (bold, colors, shading, fonts)
-"""
+    # Special requirements only
+    special = []
 
-    # Special instructions
     if settings.replace_signatures:
-        prompt += "\n- Replace signature images with plain text: [Signature] (no italics, no special formatting)"
+        special.append("Replace signature images with: [Signature]")
 
     if settings.add_page_markers:
-        prompt += "\n- Add page markers: [Page 2 of original document:] [Page 3 of original document:] etc. at page breaks"
-        prompt += "\n- IMPORTANT: Start page markers from page 2 (not page 1)"
-        prompt += "\n- Format: Plain text in brackets, no italics"
+        special.append("Add page markers: [Page 2 of original document:] [Page 3 of original document:] etc.")
+        special.append("Start markers from page 2 (not page 1)")
 
     if settings.custom_instructions:
-        prompt += f"\n\n**Additional Instructions:**\n{settings.custom_instructions}"
+        special.append(settings.custom_instructions)
 
-    # docx skill directive
+    if special:
+        prompt += "\n**Special Requirements:**\n- " + "\n- ".join(special)
+
+    # Final directive - trust the skill!
     prompt += """
 
-**Generate Document:**
-Use the docx skill to create a high-quality Word document.
-CRITICAL REMINDERS:
-- Convert ALL pages (don't stop after first page)
-- Prioritize visual fidelity to the original
-- Copy exactly what you see, don't interpret or summarize
+Use the docx skill to create the Word document. Be thorough and complete.
 """
 
     return prompt
@@ -108,53 +86,39 @@ def build_cached_prompt_parts(settings: ConversionSettings) -> Dict[str, str]:
     """
 
     # Static part (cacheable) - doesn't change between batches
-    static_instructions = """Convert this ENTIRE document (ALL PAGES) to Word (.docx) format.
+    static_instructions = """Convert this ENTIRE document (ALL PAGES) to Word (.docx) format using the docx skill.
 
-**CRITICAL: Process every single page of this document - do not stop after page 1.**
+**CRITICAL: Process every single page - do not stop after page 1.**
 
-**Table Handling:**
-- Preserve exact table structure, borders, and gridlines
-- Maintain column widths and row heights from original
-- Keep merged cells intact
-- Preserve cell alignment and padding
-- Maintain nested tables if present
-- Copy all formatting (bold, colors, shading, fonts)
+**Be Comprehensive:**
+- Include ALL text: body, headers, footers, sidebars, captions, footnotes
+- Include ALL pages from start to finish
+- Don't skip or summarize anything
 
-**Generate Document:**
-Use the docx skill to create a high-quality Word document.
-CRITICAL REMINDERS:
-- Convert ALL pages (don't stop after first page)
-- Copy exactly what you see, don't interpret or summarize
+Use the docx skill to create the Word document. Be thorough and complete.
 """
 
     # Dynamic part (not cached) - changes per conversion
+    dynamic_settings = ""
+
     if settings.override_formatting:
-        dynamic_settings = f"""**Primary Goal:**
-Apply these specific formatting settings to all content:
+        dynamic_settings += f"""
+**Apply Custom Formatting:**
 - Font: {settings.font} {settings.font_size}pt
 - Margins: Top {settings.margin_top}", Bottom {settings.margin_bottom}", Left {settings.margin_left}", Right {settings.margin_right}"
-- Reformat the entire document with these settings
-- Extract all text and restructure with new formatting
-"""
-    else:
-        dynamic_settings = """**Primary Goal:**
-Match the original document as closely as possible:
-- Keep the EXACT same fonts, sizes, and styles from the original
-- Preserve the ORIGINAL margins, alignment, and spacing
-- Maintain the ORIGINAL visual layout
-- Don't change any formatting - copy it exactly
 """
 
+    special = []
     if settings.replace_signatures:
-        dynamic_settings += "\n- Replace signature images with plain text: [Signature] (no italics, no special formatting)"
-
+        special.append("Replace signature images with: [Signature]")
     if settings.add_page_markers:
-        dynamic_settings += "\n- Add page markers: [Page 2 of original document:] [Page 3 of original document:] etc. at page breaks"
-        dynamic_settings += "\n- IMPORTANT: Start page markers from page 2 (not page 1)"
-        dynamic_settings += "\n- Format: Plain text in brackets, no italics"
-
+        special.append("Add page markers: [Page 2 of original document:] [Page 3 of original document:] etc.")
+        special.append("Start markers from page 2 (not page 1)")
     if settings.custom_instructions:
-        dynamic_settings += f"\n\n**Additional Instructions:**\n{settings.custom_instructions}"
+        special.append(settings.custom_instructions)
+
+    if special:
+        dynamic_settings += "\n**Special Requirements:**\n- " + "\n- ".join(special)
 
     return {
         'static': static_instructions,

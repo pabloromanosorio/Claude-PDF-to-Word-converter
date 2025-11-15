@@ -7,33 +7,42 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(to bottom, #f8fafc 0%, #e2e8f0 100%);
             min-height: 100vh;
         }
         .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.98);
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
         }
         .drop-zone {
-            border: 3px dashed #cbd5e0;
+            border: 2px dashed #cbd5e0;
             transition: all 0.3s ease;
+            background: #f8fafc;
         }
         .drop-zone.drag-over {
-            border-color: #667eea;
-            background-color: #eef2ff;
-            transform: scale(1.02);
+            border-color: #3b82f6;
+            background-color: #eff6ff;
+            transform: scale(1.01);
         }
         .progress-bar {
             transition: width 0.3s ease;
         }
         .input-modern {
-            border: 2px solid #e2e8f0;
+            border: 1px solid #cbd5e0;
             transition: all 0.2s;
         }
         .input-modern:focus {
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            outline: none;
+        }
+        .btn-primary {
+            background: linear-gradient(to bottom, #3b82f6, #2563eb);
+            border: 1px solid #1d4ed8;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(to bottom, #2563eb, #1d4ed8);
         }
     </style>
 </head>
@@ -42,10 +51,10 @@
         <!-- Header -->
         <header class="text-center mb-8">
             <div class="glass-card rounded-2xl p-8 shadow-2xl">
-                <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
+                <h1 class="text-4xl font-bold text-slate-800 mb-2">
                     PDF to Word Converter
                 </h1>
-                <p class="text-gray-600">v2.0 - Powered by Claude Vision API + docx Skill</p>
+                <p class="text-slate-600">v2.0 - Powered by Claude Vision API + docx Skill</p>
                 <p class="text-sm text-gray-500 mt-1">Convert PDFs to editable Word documents with perfect formatting</p>
             </div>
         </header>
@@ -66,7 +75,7 @@
             <div class="flex gap-3">
                 <input type="password" id="api-key-input" placeholder="sk-ant-..."
                        class="flex-1 input-modern rounded-lg px-4 py-3 focus:outline-none">
-                <button id="save-api-key-btn" class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:shadow-lg transition-all">
+                <button id="save-api-key-btn" class="btn-primary text-white px-6 py-3 rounded-lg font-medium hover:shadow-lg transition-all">
                     Save Key
                 </button>
             </div>
@@ -78,8 +87,8 @@
             <div class="md:col-span-2 space-y-6">
                 <!-- File Upload -->
                 <div class="glass-card rounded-2xl shadow-xl p-6">
-                    <h2 class="text-lg font-semibold mb-4 flex items-center">
-                        <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center text-slate-800">
+                        <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                         </svg>
                         Upload Document
@@ -113,8 +122,8 @@
 
                 <!-- Settings -->
                 <div class="glass-card rounded-2xl shadow-xl p-6">
-                    <h2 class="text-lg font-semibold mb-4 flex items-center">
-                        <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center text-slate-800">
+                        <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
                         </svg>
                         Conversion Settings
@@ -124,20 +133,20 @@
                     <div class="mb-5">
                         <label class="block text-sm font-medium text-gray-700 mb-3">AI Model</label>
                         <div class="grid grid-cols-2 gap-3">
-                            <label class="relative flex items-center p-4 border-2 rounded-xl cursor-pointer hover:bg-purple-50 transition-all has-[:checked]:border-purple-500 has-[:checked]:bg-purple-50 has-[:checked]:shadow-md">
+                            <label class="relative flex items-center p-4 border-2 rounded-xl cursor-pointer hover:bg-blue-50 transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:shadow-sm">
                                 <input type="radio" name="model" value="claude-haiku-4-5-20251001" checked class="mr-3">
                                 <div>
                                     <div class="font-semibold text-gray-900">Haiku</div>
                                     <div class="text-xs text-gray-600">Fast & Economical</div>
-                                    <div class="text-xs text-purple-600 font-medium mt-1">~$0.01/page</div>
+                                    <div class="text-xs text-blue-600 font-medium mt-1">~$0.01/page</div>
                                 </div>
                             </label>
-                            <label class="relative flex items-center p-4 border-2 rounded-xl cursor-pointer hover:bg-purple-50 transition-all has-[:checked]:border-purple-500 has-[:checked]:bg-purple-50 has-[:checked]:shadow-md">
+                            <label class="relative flex items-center p-4 border-2 rounded-xl cursor-pointer hover:bg-blue-50 transition-all has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:shadow-sm">
                                 <input type="radio" name="model" value="claude-sonnet-4-5-20250929" class="mr-3">
                                 <div>
                                     <div class="font-semibold text-gray-900">Sonnet</div>
                                     <div class="text-xs text-gray-600">Best Quality</div>
-                                    <div class="text-xs text-purple-600 font-medium mt-1">~$0.02/page</div>
+                                    <div class="text-xs text-blue-600 font-medium mt-1">~$0.02/page</div>
                                 </div>
                             </label>
                         </div>
@@ -145,8 +154,8 @@
 
                     <!-- Override Formatting (Resolves Contradiction!) -->
                     <div class="mb-5">
-                        <label class="flex items-center p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border-2 border-purple-200">
-                            <input type="checkbox" id="override-formatting" class="mr-3 w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
+                        <label class="flex items-center p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border-2 border-slate-200">
+                            <input type="checkbox" id="override-formatting" class="mr-3 w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
                             <div class="flex-1">
                                 <span class="text-sm font-semibold text-gray-700">Override Original Formatting</span>
                                 <p class="text-xs text-gray-500">Apply custom margins/fonts (by default, preserves original)</p>
@@ -175,15 +184,15 @@
                     <!-- Options -->
                     <div class="space-y-3">
                         <label class="flex items-center p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                            <input type="checkbox" id="page-markers" checked class="mr-3 w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
+                            <input type="checkbox" id="page-markers" checked class="mr-3 w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
                             <span class="text-sm text-gray-700">Add page markers (starts from page 2)</span>
                         </label>
                         <label class="flex items-center p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                            <input type="checkbox" id="replace-signatures" checked class="mr-3 w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
+                            <input type="checkbox" id="replace-signatures" checked class="mr-3 w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
                             <span class="text-sm text-gray-700">Replace signatures with [Signature]</span>
                         </label>
                         <label class="flex items-center p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
-                            <input type="checkbox" id="preserve-tables" checked class="mr-3 w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
+                            <input type="checkbox" id="preserve-tables" checked class="mr-3 w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
                             <span class="text-sm text-gray-700 font-medium">Preserve complex table formatting</span>
                         </label>
                     </div>
@@ -191,10 +200,10 @@
 
                 <!-- Convert Button -->
                 <button id="convert-btn" disabled
-                        class="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-4 rounded-xl font-semibold text-lg
-                               hover:shadow-2xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed
-                               transition-all transform hover:scale-[1.02] active:scale-[0.98]">
-                    🚀 Convert to Word
+                        class="w-full btn-primary text-white py-4 rounded-xl font-semibold text-lg
+                               hover:shadow-xl disabled:bg-gray-300 disabled:border-gray-400 disabled:cursor-not-allowed
+                               transition-all">
+                    Convert to Word
                 </button>
             </div>
 
@@ -234,8 +243,8 @@
 
                 <!-- Progress Container (Multi-file) -->
                 <div id="progress-container" class="hidden glass-card rounded-2xl shadow-xl p-6 max-h-96 overflow-y-auto">
-                    <h3 class="font-semibold mb-4 flex items-center">
-                        <svg class="animate-spin w-5 h-5 mr-2 text-purple-600" fill="none" viewBox="0 0 24 24">
+                    <h3 class="font-semibold mb-4 flex items-center text-slate-800">
+                        <svg class="animate-spin w-5 h-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -265,8 +274,8 @@
 
                 <!-- Usage Stats -->
                 <div class="glass-card rounded-2xl shadow-xl p-6">
-                    <h3 class="font-semibold mb-4 flex items-center">
-                        <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <h3 class="font-semibold mb-4 flex items-center text-slate-800">
+                        <svg class="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
                         </svg>
                         Usage Stats
@@ -274,11 +283,11 @@
                     <div class="space-y-3">
                         <div class="flex justify-between items-center p-2 rounded bg-gray-50">
                             <span class="text-xs text-gray-600">Conversions</span>
-                            <span class="text-lg font-bold text-purple-600" id="stat-conversions">0</span>
+                            <span class="text-lg font-bold text-blue-600" id="stat-conversions">0</span>
                         </div>
                         <div class="flex justify-between items-center p-2 rounded bg-gray-50">
                             <span class="text-xs text-gray-600">Pages</span>
-                            <span class="text-lg font-bold text-blue-600" id="stat-pages">0</span>
+                            <span class="text-lg font-bold text-slate-600" id="stat-pages">0</span>
                         </div>
                         <div class="flex justify-between items-center p-2 rounded bg-gray-50">
                             <span class="text-xs text-gray-600">Total Cost</span>
@@ -290,7 +299,7 @@
         </div>
 
         <!-- Footer -->
-        <footer class="mt-8 text-center text-white text-sm opacity-80">
+        <footer class="mt-8 text-center text-slate-600 text-sm">
             <p>Powered by Anthropic Claude Vision API • docx Skill • Built with FastAPI</p>
         </footer>
     </div>
