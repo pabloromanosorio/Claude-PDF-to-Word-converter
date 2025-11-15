@@ -34,6 +34,10 @@ def build_conversion_prompt(settings: ConversionSettings, filename: str) -> str:
 - Don't skip or summarize anything
 """
 
+    # Add table preservation if requested (tables are a common pain point)
+    if settings.preserve_table_formatting:
+        prompt += "\n- Preserve table structures and data\n"
+
     # Only override if user explicitly wants it
     if settings.override_formatting:
         prompt += f"""
@@ -94,9 +98,13 @@ def build_cached_prompt_parts(settings: ConversionSettings) -> Dict[str, str]:
 - Include ALL text: body, headers, footers, sidebars, captions, footnotes
 - Include ALL pages from start to finish
 - Don't skip or summarize anything
-
-Use the docx skill to create the Word document. Be thorough and complete.
 """
+
+    # Add table preservation if requested (goes in static part if always enabled)
+    if settings.preserve_table_formatting:
+        static_instructions += "\n- Preserve table structures and data\n"
+
+    static_instructions += "\nUse the docx skill to create the Word document. Be thorough and complete.\n"
 
     # Dynamic part (not cached) - changes per conversion
     dynamic_settings = ""
