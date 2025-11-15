@@ -6,217 +6,322 @@
     <title>PDF to Word Converter v2.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
         .drop-zone {
-            border: 2px dashed #cbd5e0;
+            border: 3px dashed #cbd5e0;
             transition: all 0.3s ease;
         }
         .drop-zone.drag-over {
-            border-color: #4299e1;
-            background-color: #ebf8ff;
+            border-color: #667eea;
+            background-color: #eef2ff;
+            transform: scale(1.02);
         }
         .progress-bar {
             transition: width 0.3s ease;
         }
+        .input-modern {
+            border: 2px solid #e2e8f0;
+            transition: all 0.2s;
+        }
+        .input-modern:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
     </style>
 </head>
-<body class="bg-gray-50">
-    <div class="max-w-4xl mx-auto p-6">
+<body>
+    <div class="container mx-auto px-4 py-8 max-w-5xl">
         <!-- Header -->
-        <header class="mb-8">
-            <h1 class="text-3xl font-bold text-gray-900">PDF to Word Converter</h1>
-            <p class="text-gray-600 mt-2">v2.0 - Convert PDFs and images to editable Word documents</p>
+        <header class="text-center mb-8">
+            <div class="glass-card rounded-2xl p-8 shadow-2xl">
+                <h1 class="text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
+                    PDF to Word Converter
+                </h1>
+                <p class="text-gray-600">v2.0 - Powered by Claude Vision API + docx Skill</p>
+                <p class="text-sm text-gray-500 mt-1">Convert PDFs to editable Word documents with perfect formatting</p>
+            </div>
         </header>
 
-        <!-- API Key Setup (shown if not configured) -->
-        <div id="api-key-setup" class="hidden bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 class="text-lg font-semibold mb-4">🔑 API Key Required</h2>
-            <p class="text-sm text-gray-600 mb-4">Enter your Anthropic API key to get started.</p>
-            <div class="flex gap-2">
+        <!-- API Key Setup -->
+        <div id="api-key-setup" class="hidden glass-card rounded-2xl shadow-xl p-6 mb-6">
+            <div class="flex items-center mb-4">
+                <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mr-4">
+                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-800">API Key Required</h2>
+                    <p class="text-sm text-gray-600">Enter your Anthropic API key to start converting</p>
+                </div>
+            </div>
+            <div class="flex gap-3">
                 <input type="password" id="api-key-input" placeholder="sk-ant-..."
-                       class="flex-1 border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <button id="save-api-key-btn" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                    Save
+                       class="flex-1 input-modern rounded-lg px-4 py-3 focus:outline-none">
+                <button id="save-api-key-btn" class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:shadow-lg transition-all">
+                    Save Key
                 </button>
             </div>
             <p id="api-key-error" class="text-red-600 text-sm mt-2 hidden"></p>
         </div>
 
-        <!-- File Upload -->
-        <div id="upload-section" class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <div id="drop-zone" class="drop-zone rounded-lg p-12 text-center cursor-pointer">
-                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                </svg>
-                <p class="mt-2 text-sm text-gray-600">
-                    <span class="font-semibold">Click to upload</span> or drag and drop
-                </p>
-                <p class="text-xs text-gray-500 mt-1">PDF, JPG, or PNG (max 50MB)</p>
-                <input type="file" id="file-input" class="hidden" accept=".pdf,.jpg,.jpeg,.png">
-            </div>
-
-            <!-- Selected File -->
-            <div id="selected-file" class="hidden mt-4 p-4 bg-blue-50 rounded-lg">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center">
-                        <svg class="h-8 w-8 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+        <div class="grid md:grid-cols-3 gap-6">
+            <!-- Left: Upload & Settings -->
+            <div class="md:col-span-2 space-y-6">
+                <!-- File Upload -->
+                <div class="glass-card rounded-2xl shadow-xl p-6">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                         </svg>
-                        <div class="ml-3">
-                            <p id="file-name" class="text-sm font-medium text-gray-900"></p>
-                            <p id="file-info" class="text-sm text-gray-500"></p>
+                        Upload Document
+                    </h2>
+                    <div id="drop-zone" class="drop-zone rounded-xl p-10 text-center cursor-pointer">
+                        <svg class="mx-auto h-16 w-16 text-gray-400 mb-4" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <p class="text-lg text-gray-700 font-medium">
+                            Click to upload or drag and drop
+                        </p>
+                        <p class="text-sm text-gray-500 mt-2">PDF, JPG, or PNG (max 50MB)</p>
+                        <input type="file" id="file-input" class="hidden" accept=".pdf,.jpg,.jpeg,.png">
+                    </div>
+
+                    <!-- Selected File -->
+                    <div id="selected-file" class="hidden mt-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border-2 border-purple-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center">
+                                <div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center mr-3 shadow-sm">
+                                    <svg class="h-6 w-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p id="file-name" class="text-sm font-semibold text-gray-900"></p>
+                                    <p id="file-info" class="text-xs text-gray-600"></p>
+                                </div>
+                            </div>
+                            <button id="clear-file" class="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors">
+                                <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
-                    <button id="clear-file" class="text-red-600 hover:text-red-800">
-                        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                </div>
+
+                <!-- Settings -->
+                <div class="glass-card rounded-2xl shadow-xl p-6">
+                    <h2 class="text-lg font-semibold mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
                         </svg>
+                        Conversion Settings
+                    </h2>
+
+                    <!-- Model Selection -->
+                    <div class="mb-5">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">AI Model</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="relative flex items-center p-4 border-2 rounded-xl cursor-pointer hover:bg-purple-50 transition-all has-[:checked]:border-purple-500 has-[:checked]:bg-purple-50 has-[:checked]:shadow-md">
+                                <input type="radio" name="model" value="claude-haiku-4-5-20251001" checked class="mr-3">
+                                <div>
+                                    <div class="font-semibold text-gray-900">Haiku</div>
+                                    <div class="text-xs text-gray-600">Fast & Economical</div>
+                                    <div class="text-xs text-purple-600 font-medium mt-1">~$0.01/page</div>
+                                </div>
+                            </label>
+                            <label class="relative flex items-center p-4 border-2 rounded-xl cursor-pointer hover:bg-purple-50 transition-all has-[:checked]:border-purple-500 has-[:checked]:bg-purple-50 has-[:checked]:shadow-md">
+                                <input type="radio" name="model" value="claude-sonnet-4-5-20250929" class="mr-3">
+                                <div>
+                                    <div class="font-semibold text-gray-900">Sonnet</div>
+                                    <div class="text-xs text-gray-600">Best Quality</div>
+                                    <div class="text-xs text-purple-600 font-medium mt-1">~$0.02/page</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Margins -->
+                    <div class="mb-5">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">Page Margins (inches)</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="text-xs text-gray-600 mb-1 block">Top & Bottom</label>
+                                <input type="number" id="margin-vertical" min="0.1" max="3" step="0.1" value="1.0"
+                                       class="w-full input-modern rounded-lg px-3 py-2 text-sm focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="text-xs text-gray-600 mb-1 block">Left & Right</label>
+                                <input type="number" id="margin-horizontal" min="0.1" max="3" step="0.1" value="1.0"
+                                       class="w-full input-modern rounded-lg px-3 py-2 text-sm focus:outline-none">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Options -->
+                    <div class="space-y-3">
+                        <label class="flex items-center p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <input type="checkbox" id="page-markers" checked class="mr-3 w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
+                            <span class="text-sm text-gray-700">Add page markers (starts from page 2)</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <input type="checkbox" id="replace-signatures" checked class="mr-3 w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
+                            <span class="text-sm text-gray-700">Replace signatures with [Signature]</span>
+                        </label>
+                        <label class="flex items-center p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                            <input type="checkbox" id="preserve-tables" checked class="mr-3 w-5 h-5 text-purple-600 rounded focus:ring-purple-500">
+                            <span class="text-sm text-gray-700 font-medium">Preserve complex table formatting</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Convert Button -->
+                <button id="convert-btn" disabled
+                        class="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-4 rounded-xl font-semibold text-lg
+                               hover:shadow-2xl disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed
+                               transition-all transform hover:scale-[1.02] active:scale-[0.98]">
+                    🚀 Convert to Word
+                </button>
+            </div>
+
+            <!-- Right: Info & Status -->
+            <div class="space-y-6">
+                <!-- Cost Estimate -->
+                <div id="cost-estimate" class="hidden glass-card rounded-2xl shadow-xl p-6">
+                    <h3 class="font-semibold mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        Cost Estimate
+                    </h3>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Pages:</span>
+                            <span id="est-pages" class="font-semibold"></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Low:</span>
+                            <span class="text-green-600 font-semibold">$<span id="est-low"></span></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">Average:</span>
+                            <span class="text-blue-600 font-semibold">$<span id="est-avg"></span></span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-gray-600">High:</span>
+                            <span class="text-orange-600 font-semibold">$<span id="est-high"></span></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress -->
+                <div id="progress-section" class="hidden glass-card rounded-2xl shadow-xl p-6">
+                    <h3 class="font-semibold mb-4 flex items-center">
+                        <svg class="animate-spin w-5 h-5 mr-2 text-purple-600" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Converting...
+                    </h3>
+                    <div class="mb-3">
+                        <div class="flex justify-between text-xs mb-2">
+                            <span id="progress-step" class="text-gray-600 font-medium"></span>
+                            <span id="progress-percent" class="font-bold text-purple-600">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                            <div id="progress-bar" class="progress-bar bg-gradient-to-r from-purple-500 to-blue-500 h-3 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 text-center">
+                        <svg class="inline w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"></path>
+                            <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"></path>
+                        </svg>
+                        Real-time updates
+                    </p>
+                </div>
+
+                <!-- Success -->
+                <div id="success-section" class="hidden glass-card rounded-2xl shadow-xl p-6 border-2 border-green-400">
+                    <div class="text-center mb-4">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-8 h-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-green-900 mb-1">Success!</h3>
+                        <p id="success-filename" class="text-sm text-green-700 mb-4"></p>
+                        <p class="text-sm text-gray-600 mb-2">
+                            Actual cost: <span class="font-bold text-green-600">$<span id="cost-value"></span></span>
+                        </p>
+                    </div>
+                    <div class="space-y-2">
+                        <button id="download-btn" class="w-full bg-green-600 text-white py-3 rounded-lg font-semibold hover:bg-green-700 transition-all hover:shadow-lg">
+                            📥 Download .docx
+                        </button>
+                        <button id="convert-another-btn" class="w-full border-2 border-green-600 text-green-600 py-3 rounded-lg font-semibold hover:bg-green-50 transition-all">
+                            ↻ Convert Another
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Error -->
+                <div id="error-section" class="hidden glass-card rounded-2xl shadow-xl p-6 border-2 border-red-400">
+                    <div class="text-center mb-4">
+                        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <svg class="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-red-900 mb-2">Conversion Failed</h3>
+                        <p id="error-message" class="text-sm text-red-700 mb-4"></p>
+                    </div>
+                    <button id="error-ok-btn" class="w-full bg-red-600 text-white py-3 rounded-lg font-semibold hover:bg-red-700 transition-all">
+                        OK
                     </button>
                 </div>
-            </div>
-        </div>
 
-        <!-- Settings -->
-        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 class="text-lg font-semibold mb-4">Settings</h2>
-
-            <!-- Model Selection -->
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Model</label>
-                <div class="grid grid-cols-2 gap-4">
-                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
-                        <input type="radio" name="model" value="claude-haiku-4-5-20251001" checked class="mr-3">
-                        <div>
-                            <div class="font-medium">Haiku</div>
-                            <div class="text-xs text-gray-500">~$0.01/page - Fast & efficient</div>
+                <!-- Usage Stats -->
+                <div class="glass-card rounded-2xl shadow-xl p-6">
+                    <h3 class="font-semibold mb-4 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                        </svg>
+                        Usage Stats
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center p-2 rounded bg-gray-50">
+                            <span class="text-xs text-gray-600">Conversions</span>
+                            <span class="text-lg font-bold text-purple-600" id="stat-conversions">0</span>
                         </div>
-                    </label>
-                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
-                        <input type="radio" name="model" value="claude-sonnet-4-5-20250929" class="mr-3">
-                        <div>
-                            <div class="font-medium">Sonnet</div>
-                            <div class="text-xs text-gray-500">~$0.02/page - High quality</div>
+                        <div class="flex justify-between items-center p-2 rounded bg-gray-50">
+                            <span class="text-xs text-gray-600">Pages</span>
+                            <span class="text-lg font-bold text-blue-600" id="stat-pages">0</span>
                         </div>
-                    </label>
-                </div>
-            </div>
-
-            <!-- Options -->
-            <div class="space-y-2">
-                <label class="flex items-center">
-                    <input type="checkbox" id="page-markers" checked class="mr-2 rounded">
-                    <span class="text-sm">Add page markers at breaks</span>
-                </label>
-                <label class="flex items-center">
-                    <input type="checkbox" id="replace-signatures" checked class="mr-2 rounded">
-                    <span class="text-sm">Replace signature images with [Signature]</span>
-                </label>
-                <label class="flex items-center">
-                    <input type="checkbox" id="preserve-tables" checked class="mr-2 rounded">
-                    <span class="text-sm font-medium text-blue-600">Preserve complex table formatting</span>
-                </label>
-            </div>
-        </div>
-
-        <!-- Cost Estimate -->
-        <div id="cost-estimate" class="hidden bg-blue-50 rounded-lg p-4 mb-6">
-            <h3 class="font-semibold mb-2">Estimated Cost</h3>
-            <div class="flex justify-between text-sm">
-                <span>Pages: <span id="est-pages" class="font-medium"></span></span>
-                <span>Low: $<span id="est-low"></span></span>
-                <span>Avg: $<span id="est-avg"></span></span>
-                <span>High: $<span id="est-high"></span></span>
-            </div>
-        </div>
-
-        <!-- Convert Button -->
-        <button id="convert-btn" disabled
-                class="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold
-                       hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed
-                       transition-colors">
-            Convert to Word
-        </button>
-
-        <!-- Progress -->
-        <div id="progress-section" class="hidden mt-6 bg-white rounded-lg shadow-md p-6">
-            <h3 class="font-semibold mb-3">Converting...</h3>
-            <div class="mb-2">
-                <div class="flex justify-between text-sm mb-1">
-                    <span id="progress-step" class="text-gray-600">Preparing...</span>
-                    <span id="progress-percent" class="font-medium">0%</span>
-                </div>
-                <div class="w-full bg-gray-200 rounded-full h-2">
-                    <div id="progress-bar" class="progress-bar bg-blue-600 h-2 rounded-full" style="width: 0%"></div>
-                </div>
-            </div>
-            <p class="text-xs text-gray-500 mt-2">Real-time updates via WebSocket</p>
-        </div>
-
-        <!-- Success -->
-        <div id="success-section" class="hidden mt-6 bg-green-50 rounded-lg p-6">
-            <div class="flex items-center mb-4">
-                <svg class="h-8 w-8 text-green-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                </svg>
-                <div>
-                    <h3 class="font-semibold text-green-900">Conversion Complete!</h3>
-                    <p id="success-filename" class="text-sm text-green-700"></p>
-                </div>
-            </div>
-            <div class="flex gap-4">
-                <button id="download-btn" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition-colors">
-                    Download
-                </button>
-                <button id="convert-another-btn" class="flex-1 border border-green-600 text-green-600 py-2 rounded-lg hover:bg-green-50 transition-colors">
-                    Convert Another
-                </button>
-            </div>
-            <p id="actual-cost" class="text-sm text-gray-600 mt-3 text-center">
-                Actual cost: $<span id="cost-value"></span>
-            </p>
-        </div>
-
-        <!-- Error -->
-        <div id="error-section" class="hidden mt-6 bg-red-50 rounded-lg p-6">
-            <div class="flex items-center mb-4">
-                <svg class="h-8 w-8 text-red-500 mr-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                </svg>
-                <div>
-                    <h3 class="font-semibold text-red-900">Conversion Failed</h3>
-                    <p id="error-message" class="text-sm text-red-700"></p>
-                </div>
-            </div>
-            <button id="error-ok-btn" class="w-full bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 transition-colors">
-                OK
-            </button>
-        </div>
-
-        <!-- Usage Stats -->
-        <div class="mt-6 bg-white rounded-lg shadow-md p-6">
-            <h3 class="font-semibold mb-3">Usage Statistics</h3>
-            <div class="grid grid-cols-3 gap-4 text-center">
-                <div>
-                    <div class="text-2xl font-bold text-blue-600" id="stat-conversions">0</div>
-                    <div class="text-xs text-gray-500">Conversions</div>
-                </div>
-                <div>
-                    <div class="text-2xl font-bold text-blue-600" id="stat-pages">0</div>
-                    <div class="text-xs text-gray-500">Pages</div>
-                </div>
-                <div>
-                    <div class="text-2xl font-bold text-blue-600">$<span id="stat-cost">0.00</span></div>
-                    <div class="text-xs text-gray-500">Total Cost</div>
+                        <div class="flex justify-between items-center p-2 rounded bg-gray-50">
+                            <span class="text-xs text-gray-600">Total Cost</span>
+                            <span class="text-lg font-bold text-green-600">$<span id="stat-cost">0.00</span></span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Footer -->
-        <footer class="mt-8 text-center text-sm text-gray-500">
-            <p>PDF to Word Converter v2.0</p>
-            <p class="mt-1">Using Claude Vision API + docx Skill</p>
+        <footer class="mt-8 text-center text-white text-sm opacity-80">
+            <p>Powered by Anthropic Claude Vision API • docx Skill • Built with FastAPI</p>
         </footer>
     </div>
 
-    <script src="js/app.js"></script>
+    <script src="/static/js/app.js"></script>
 </body>
 </html>

@@ -19,7 +19,12 @@ class ConversionSettings(BaseModel):
     # Font settings
     font: str = Field(default='Arial', description='Font family')
     font_size: int = Field(default=12, ge=8, le=72, description='Font size in points')
-    margin: float = Field(default=1.0, ge=0.1, le=3.0, description='Margin in inches (all sides)')
+
+    # Margins (separate for better control)
+    margin_top: float = Field(default=1.0, ge=0.1, le=3.0, description='Top margin in inches')
+    margin_bottom: float = Field(default=1.0, ge=0.1, le=3.0, description='Bottom margin in inches')
+    margin_left: float = Field(default=1.0, ge=0.1, le=3.0, description='Left margin in inches')
+    margin_right: float = Field(default=1.0, ge=0.1, le=3.0, description='Right margin in inches')
 
     # Model selection
     model: Literal['claude-haiku-4-5-20251001', 'claude-sonnet-4-5-20250929'] = \
@@ -27,7 +32,7 @@ class ConversionSettings(BaseModel):
 
     # Document processing options
     replace_signatures: bool = Field(default=True, description='Replace signature images with [Signature]')
-    add_page_markers: bool = Field(default=True, description='Add page markers at breaks')
+    add_page_markers: bool = Field(default=True, description='Add page markers starting from page 2')
 
     # Table handling (CRITICAL for complex documents)
     preserve_table_formatting: bool = Field(default=True, description='Maintain table structure')
@@ -49,7 +54,10 @@ class ConversionSettings(BaseModel):
             "example": {
                 "font": "Arial",
                 "font_size": 12,
-                "margin": 1.0,
+                "margin_top": 1.0,
+                "margin_bottom": 1.0,
+                "margin_left": 1.0,
+                "margin_right": 1.0,
                 "model": "claude-haiku-4-5-20251001",
                 "replace_signatures": True,
                 "add_page_markers": True,
