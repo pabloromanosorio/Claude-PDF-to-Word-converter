@@ -496,3 +496,113 @@ if __name__ == "__main__":
         reload=True,
         log_level="info"
     )
+
+@app.post("/api/convert-batch")
+async def convert_batch(
+    files: list[UploadFile] = File(...),
+    settings: str = Form(...)
+):
+    """
+    Upload and convert multiple documents.
+    Files are processed sequentially to avoid overwhelming the API.
+    
+    Returns list of job IDs for tracking progress.
+    """
+    import json
+    
+    try:
+        # Parse settings
+        settings_dict = json.loads(settings)
+        conversion_settings = ConversionSettings(**settings_dict)
+        
+        # Validate file count
+        if len(files) > 20:
+            raise HTTPException(status_code=400, detail="Maximum 20 files per batch")
+        
+        file_service = get_file_service()
+        cost_service = get_cost_service()
+        job_ids = []
+        
+        # Create jobs for all files
+        for file in files:
+            # Save uploaded file
+            file_data = await file.read()
+            job_id = str(uuid.uuid4())
+            file_path = file_service.get_file_path(job_id, file.filename)
+            file_path.write_bytes(file_data)
+            
+            # Get page count
+            page_count = cost_service.get_page_count(str(file_path))
+            
+            # Estimate cost
+            estimate = cost_service.estimate_cost(page_count, conversion_settings.model, None)
+            
+            # Create job record
+            job_data = {
+                'id': job_id,
+                'filename': file.filename,
+                'file_size': len(file_data),
+                'page_count': page_count,
+                'page_range': None,
+                'settings': conversion_settings.model_dump(),
+                'status': 'queued',
+                'estimated_cost_low': estimate.estimated_cost_low,
+                'estimated_cost_avg': estimate.estimated_cost_avg,
+                'estimated_cost_high': estimate.estimated_cost_high
+            }
+            
+            save_job(job_data)
+            job_ids.append({
+                'job_id': job_id,
+                'filename': file.filename,
+                'page_count': page_count,
+                'estimated_cost': estimate.model_dump()
+            })
+            
+            logger.info(f"Created batch job {job_id} for {file.filename}")
+        
+        # Start processing batch sequentially in background
+        asyncio.create_task(process_batch(job_ids))
+        
+        return {
+            "batch_size": len(files),
+            "jobs": job_ids
+        }
+        
+    except Exception as e:
+        logger.error(f"Error creating batch conversion: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+async def process_batch(job_infos: list[dict]):
+    """
+    Process multiple jobs sequentially to avoid overwhelming API.
+    
+    Args:
+        job_infos: List of job info dicts with job_id
+    """
+    logger.info(f"Starting batch processing of {len(job_infos)} files")
+    
+    for i, job_info in enumerate(job_infos):
+        job_id = job_info['job_id']
+        logger.info(f"Processing batch file {i+1}/{len(job_infos)}: {job_id}")
+        
+        # Get job record to find file path
+        job_record = get_job(job_id)
+        if not job_record:
+            logger.error(f"Job {job_id} not found")
+            continue
+        
+        # Find file path
+        file_service = get_file_service()
+        file_path = file_service.get_file_path(job_id, job_record.filename)
+        
+        # Process this file (waits for completion)
+        await process_conversion(job_id, str(file_path))
+        
+        # Small delay between files to be respectful to API
+        if i < len(job_infos) - 1:
+            await asyncio.sleep(2)
+    
+    logger.info(f"Batch processing complete: {len(job_infos)} files")
+

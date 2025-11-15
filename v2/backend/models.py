@@ -16,11 +16,14 @@ from datetime import datetime
 class ConversionSettings(BaseModel):
     """User settings for document conversion"""
 
-    # Font settings
+    # Formatting override option (resolves contradiction!)
+    override_formatting: bool = Field(default=False, description='Override original formatting with custom settings')
+
+    # Font settings (only used if override_formatting=True)
     font: str = Field(default='Arial', description='Font family')
     font_size: int = Field(default=12, ge=8, le=72, description='Font size in points')
 
-    # Margins (separate for better control)
+    # Margins (only used if override_formatting=True)
     margin_top: float = Field(default=1.0, ge=0.1, le=3.0, description='Top margin in inches')
     margin_bottom: float = Field(default=1.0, ge=0.1, le=3.0, description='Bottom margin in inches')
     margin_left: float = Field(default=1.0, ge=0.1, le=3.0, description='Left margin in inches')

@@ -23,22 +23,36 @@ def build_conversion_prompt(settings: ConversionSettings, filename: str) -> str:
         Optimized prompt string
     """
 
-    # Base prompt - CRITICAL: Emphasize ALL pages and fidelity to original
+    # Base prompt - CRITICAL: Emphasize ALL pages
     prompt = f"""Convert this ENTIRE document (ALL PAGES) to Word (.docx) format.
 
 **CRITICAL: Process every single page of this document - do not stop after page 1.**
 
 **Primary Goal:**
-Match the original document as closely as possible:
-- Keep the same visual layout and spacing
-- Preserve the original margins, alignment, and formatting
-- Maintain exact table structures
-- Copy all text exactly as shown
+"""
 
-**Output Settings:**
+    # NO CONTRADICTION: Either preserve original OR apply custom formatting
+    if settings.override_formatting:
+        prompt += f"""Apply these specific formatting settings to all content:
 - Font: {settings.font} {settings.font_size}pt
 - Margins: Top {settings.margin_top}", Bottom {settings.margin_bottom}", Left {settings.margin_left}", Right {settings.margin_right}"
+- Reformat the entire document with these settings
+- Extract all text and restructure with new formatting
+"""
+    else:
+        prompt += """Match the original document as closely as possible:
+- Keep the EXACT same fonts, sizes, and styles from the original
+- Preserve the ORIGINAL margins, alignment, and spacing
+- Maintain the ORIGINAL visual layout
+- Don't change any formatting - copy it exactly
+"""
+
+    prompt += f"""
 - Filename: {filename}.docx
+
+**Text and Structure:**
+- Copy all text exactly as shown (verbatim)
+- Maintain exact table structures
 """
 
     # Table-specific instructions (CRITICAL for complex documents)
@@ -98,13 +112,6 @@ def build_cached_prompt_parts(settings: ConversionSettings) -> Dict[str, str]:
 
 **CRITICAL: Process every single page of this document - do not stop after page 1.**
 
-**Primary Goal:**
-Match the original document as closely as possible:
-- Keep the same visual layout and spacing
-- Preserve the original margins, alignment, and formatting
-- Maintain exact table structures
-- Copy all text exactly as shown
-
 **Table Handling:**
 - Preserve exact table structure, borders, and gridlines
 - Maintain column widths and row heights from original
@@ -117,14 +124,25 @@ Match the original document as closely as possible:
 Use the docx skill to create a high-quality Word document.
 CRITICAL REMINDERS:
 - Convert ALL pages (don't stop after first page)
-- Prioritize visual fidelity to the original
 - Copy exactly what you see, don't interpret or summarize
 """
 
     # Dynamic part (not cached) - changes per conversion
-    dynamic_settings = f"""**Output Settings:**
+    if settings.override_formatting:
+        dynamic_settings = f"""**Primary Goal:**
+Apply these specific formatting settings to all content:
 - Font: {settings.font} {settings.font_size}pt
 - Margins: Top {settings.margin_top}", Bottom {settings.margin_bottom}", Left {settings.margin_left}", Right {settings.margin_right}"
+- Reformat the entire document with these settings
+- Extract all text and restructure with new formatting
+"""
+    else:
+        dynamic_settings = """**Primary Goal:**
+Match the original document as closely as possible:
+- Keep the EXACT same fonts, sizes, and styles from the original
+- Preserve the ORIGINAL margins, alignment, and spacing
+- Maintain the ORIGINAL visual layout
+- Don't change any formatting - copy it exactly
 """
 
     if settings.replace_signatures:
