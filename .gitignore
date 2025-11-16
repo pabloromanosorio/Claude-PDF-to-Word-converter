@@ -43,8 +43,9 @@ temp_skill/
 # Old backups
 *-OLD.zip
 *.bak
-v2/.env
-v2/venv/
-v2/data/
-v2/build_env/
 *.backup
+
+# Application data
+.env
+data/
+build_env/
