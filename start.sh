@@ -57,6 +57,15 @@ echo "🎉 Starting PDF to Word Converter..."
 echo "📡 Server will be available at: http://localhost:8000"
 echo "🔑 Configure your API key in the web UI if not set"
 echo ""
+
+# Kill any existing process on port 8000
+if lsof -Pi :8000 -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+    echo "⚠️  Port 8000 is in use. Stopping existing process..."
+    lsof -ti:8000 | xargs kill -9 2>/dev/null || true
+    sleep 1
+    echo "✅ Port cleared"
+fi
+
 echo "Press Ctrl+C to stop the server"
 echo "=============================="
 echo ""
