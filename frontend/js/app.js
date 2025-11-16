@@ -61,7 +61,10 @@ function setupEventListeners() {
     });
 
     // API key
+    document.getElementById('settings-btn').addEventListener('click', showApiKeySettings);
+    document.getElementById('close-api-key-btn').addEventListener('click', hideApiKeySettings);
     document.getElementById('save-api-key-btn').addEventListener('click', saveApiKey);
+    document.getElementById('test-api-key-btn').addEventListener('click', testApiKey);
 
     // Override formatting toggle
     document.getElementById('override-formatting').addEventListener('change', (e) => {
@@ -124,12 +127,71 @@ async function saveApiKey() {
         document.getElementById('api-key-setup').classList.add('hidden');
         apiKeyInput.value = '';
         errorEl.classList.add('hidden');
+        document.getElementById('api-key-success').textContent = 'API key saved successfully!';
+        document.getElementById('api-key-success').classList.remove('hidden');
+        setTimeout(() => {
+            document.getElementById('api-key-success').classList.add('hidden');
+        }, 3000);
     } catch (error) {
         errorEl.textContent = 'Error: ' + error.message;
         errorEl.classList.remove('hidden');
     } finally {
         btn.disabled = false;
         btn.textContent = 'Save Key';
+    }
+}
+
+// Show API key settings
+function showApiKeySettings() {
+    document.getElementById('api-key-setup').classList.remove('hidden');
+}
+
+// Hide API key settings
+function hideApiKeySettings() {
+    document.getElementById('api-key-setup').classList.add('hidden');
+    document.getElementById('api-key-error').classList.add('hidden');
+    document.getElementById('api-key-success').classList.add('hidden');
+}
+
+// Test API key
+async function testApiKey() {
+    const btn = document.getElementById('test-api-key-btn');
+    const statusEl = document.getElementById('api-key-status');
+    const errorEl = document.getElementById('api-key-error');
+    const successEl = document.getElementById('api-key-success');
+
+    errorEl.classList.add('hidden');
+    successEl.classList.add('hidden');
+    btn.disabled = true;
+    btn.textContent = 'Testing...';
+    statusEl.classList.add('hidden');
+
+    try {
+        const response = await fetch(`${API_BASE}/api/api-key/status`);
+        const data = await response.json();
+
+        if (data.has_api_key) {
+            statusEl.textContent = '✓ API Key Valid';
+            statusEl.className = 'flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-green-100 text-green-700';
+            statusEl.classList.remove('hidden');
+            successEl.textContent = 'API key is configured and ready to use!';
+            successEl.classList.remove('hidden');
+        } else {
+            statusEl.textContent = '✗ No API Key';
+            statusEl.className = 'flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-700';
+            statusEl.classList.remove('hidden');
+            errorEl.textContent = 'No API key configured. Please enter and save your API key.';
+            errorEl.classList.remove('hidden');
+        }
+    } catch (error) {
+        statusEl.textContent = '✗ Test Failed';
+        statusEl.className = 'flex-1 px-4 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-700';
+        statusEl.classList.remove('hidden');
+        errorEl.textContent = 'Error testing API key: ' + error.message;
+        errorEl.classList.remove('hidden');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Test API Key';
     }
 }
 

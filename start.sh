@@ -38,15 +38,17 @@ else
     echo "✅ Dependencies already installed"
 fi
 
-# Check for .env file
+# Check for .env file (create if missing, but don't exit)
 if [ ! -f ".env" ]; then
     if [ -f ".env.example" ]; then
         echo "⚠️  No .env file found"
-        echo "Creating .env from .env.example..."
+        echo "Creating empty .env file..."
         cp .env.example .env
-        echo "📝 Please edit .env and add your Anthropic API key"
-        echo "   Then run this script again"
-        exit 0
+        echo "🔑 You can configure your API key in the web UI"
+    else
+        # Create minimal .env
+        echo "ANTHROPIC_API_KEY=" > .env
+        echo "LOG_LEVEL=INFO" >> .env
     fi
 fi
 
