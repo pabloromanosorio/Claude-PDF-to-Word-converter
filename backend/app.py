@@ -577,32 +577,27 @@ async def convert_batch(
 async def process_batch(job_infos: list[dict]):
     """
     Process multiple jobs sequentially to avoid overwhelming API.
-    
+
     Args:
-        job_infos: List of job info dicts with job_id
+        job_infos: List of job info dicts with job_id and filename
     """
     logger.info(f"Starting batch processing of {len(job_infos)} files")
-    
+
     for i, job_info in enumerate(job_infos):
         job_id = job_info['job_id']
+        filename = job_info['filename']
         logger.info(f"Processing batch file {i+1}/{len(job_infos)}: {job_id}")
-        
-        # Get job record to find file path
-        job_record = get_job(job_id)
-        if not job_record:
-            logger.error(f"Job {job_id} not found")
-            continue
-        
+
         # Find file path
         file_service = get_file_service()
-        file_path = file_service.get_file_path(job_id, job_record.filename)
-        
+        file_path = file_service.get_file_path(job_id, filename)
+
         # Process this file (waits for completion)
         await process_conversion(job_id, str(file_path))
-        
+
         # Small delay between files to be respectful to API
         if i < len(job_infos) - 1:
             await asyncio.sleep(2)
-    
+
     logger.info(f"Batch processing complete: {len(job_infos)} files")
 
