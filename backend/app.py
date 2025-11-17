@@ -164,28 +164,35 @@ async def process_conversion(job_id: str, file_path: str):
         # Create converter
         converter = ConversionEngine(api_key)
 
-        # Progress callback
-        async def progress_callback(update_dict):
+        # Get event loop for progress callbacks from thread
+        loop = asyncio.get_event_loop()
+
+        # Progress callback that can be called from worker thread
+        def progress_callback_sync(update_dict):
+            """Sync wrapper that schedules async callback on main loop"""
             progress = update_dict['progress']
             step = update_dict['step']
 
-            # Update database
+            # Update database (sync operation)
             update_job(job_id, progress=progress, current_step=step)
 
-            # Send WebSocket update
-            await manager.send_update(job_id, JobUpdate(
-                job_id=job_id,
-                status='processing',
-                progress=progress,
-                step=step
-            ))
+            # Schedule WebSocket update on main loop
+            asyncio.run_coroutine_threadsafe(
+                manager.send_update(job_id, JobUpdate(
+                    job_id=job_id,
+                    status='processing',
+                    progress=progress,
+                    step=step
+                )),
+                loop
+            )
 
         # Convert
         result = await asyncio.to_thread(
             converter.convert_document,
             file_path,
             settings,
-            lambda p: asyncio.create_task(progress_callback(p))
+            progress_callback_sync
         )
 
         if result['success']:
@@ -445,6 +452,48 @@ async def save_settings(settings: ConversionSettings):
     config_mgr = get_config_manager()
     config_mgr.save_settings(settings)
     return {"success": True}
+
+
+@app.post("/api/estimate-cost")
+async def estimate_cost(
+    file: UploadFile = File(...),
+    model: str = Form(...)
+):
+    """
+    Estimate conversion cost for a file.
+
+    Args:
+        file: PDF or image file to estimate
+        model: Model to use for conversion
+
+    Returns:
+        Cost estimate with page count and low/avg/high costs
+    """
+    temp_path = None
+    try:
+        # Get file service
+        file_service = get_file_service()
+        cost_service = get_cost_service()
+
+        # Save file temporarily to read page count
+        temp_path = file_service.save_upload(file)
+
+        # Get page count
+        page_count = cost_service.get_page_count(temp_path)
+
+        # Get cost estimate
+        estimate = cost_service.estimate_cost(page_count, model)
+
+        return estimate.model_dump()
+
+    except Exception as e:
+        logger.error(f"Failed to estimate cost: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    finally:
+        # Clean up temporary file
+        if temp_path and Path(temp_path).exists():
+            Path(temp_path).unlink()
 
 
 @app.get("/api/api-key/status")
