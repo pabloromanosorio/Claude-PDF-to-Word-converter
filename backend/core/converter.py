@@ -87,10 +87,25 @@ class ConversionEngine:
         try:
             self._update_progress(progress_callback, 10, 'Preparing file')
 
-            # Load and encode file
-            file_base64 = self._file_to_base64(file_path)
-            media_type = self._get_media_type(file_path)
             filename = Path(file_path).stem
+
+            # Choose processing mode
+            if settings.use_text_extraction and file_path.endswith('.pdf'):
+                # TEXT EXTRACTION MODE (90% cheaper)
+                logger.info(f"Using text extraction mode for {filename}")
+                self._update_progress(progress_callback, 15, 'Extracting text from PDF')
+
+                extracted_text = self._extract_text_from_pdf(file_path)
+                file_base64 = None
+                media_type = None
+
+                logger.info(f"Extracted {len(extracted_text)} characters from {filename}")
+            else:
+                # VISION MODE (full fidelity, expensive)
+                logger.info(f"Using vision mode for {filename}")
+                file_base64 = self._file_to_base64(file_path)
+                media_type = self._get_media_type(file_path)
+                extracted_text = None
 
             self._update_progress(progress_callback, 20, 'Building conversion prompt')
 
@@ -104,7 +119,7 @@ class ConversionEngine:
 
             # Make API call with retry
             response = with_retry(
-                lambda: self._make_api_call(file_base64, media_type, prompt, settings),
+                lambda: self._make_api_call(file_base64, media_type, prompt, settings, extracted_text),
                 operation_name=f"Convert {filename}"
             )
 
@@ -149,16 +164,43 @@ class ConversionEngine:
 
     def _make_api_call(
         self,
-        file_base64: str,
-        media_type: str,
+        file_base64: Optional[str],
+        media_type: Optional[str],
         prompt: str,
-        settings: ConversionSettings
+        settings: ConversionSettings,
+        extracted_text: Optional[str] = None
     ):
         """
         Make the actual API call to Claude.
 
         Separated for retry logic.
         """
+        # Build message content based on mode
+        if extracted_text:
+            # TEXT EXTRACTION MODE - Send text only (90% cheaper!)
+            content = [
+                {
+                    'type': 'text',
+                    'text': f"{prompt}\n\n---\n\nExtracted text from PDF:\n\n{extracted_text}"
+                }
+            ]
+        else:
+            # VISION MODE - Send document for full fidelity
+            content = [
+                {
+                    'type': 'document',
+                    'source': {
+                        'type': 'base64',
+                        'media_type': media_type,
+                        'data': file_base64
+                    }
+                },
+                {
+                    'type': 'text',
+                    'text': prompt
+                }
+            ]
+
         return self.client.beta.messages.create(
             model=settings.model,
             max_tokens=32000,  # Increased to support longer multi-page documents
@@ -176,20 +218,7 @@ class ConversionEngine:
             },
             messages=[{
                 'role': 'user',
-                'content': [
-                    {
-                        'type': 'document',
-                        'source': {
-                            'type': 'base64',
-                            'media_type': media_type,
-                            'data': file_base64
-                        }
-                    },
-                    {
-                        'type': 'text',
-                        'text': prompt
-                    }
-                ]
+                'content': content
             }],
             tools=[{
                 'type': 'code_execution_20250825',
@@ -243,6 +272,43 @@ class ConversionEngine:
             '.png': 'image/png'
         }
         return media_types.get(ext, 'application/pdf')
+
+    def _extract_text_from_pdf(self, file_path: str) -> str:
+        """
+        Extract text from PDF using pypdf (text-only mode).
+
+        This is 90% cheaper than vision mode but loses images and complex formatting.
+
+        Args:
+            file_path: Path to PDF file
+
+        Returns:
+            Extracted text from all pages
+        """
+        try:
+            from pypdf import PdfReader
+
+            reader = PdfReader(file_path)
+            text_parts = []
+
+            for i, page in enumerate(reader.pages, 1):
+                page_text = page.extract_text()
+                if page_text.strip():
+                    text_parts.append(f"--- Page {i} ---\n{page_text}\n")
+
+            full_text = "\n".join(text_parts)
+
+            if not full_text.strip():
+                raise ValueError("No text could be extracted from PDF (may be scanned images)")
+
+            return full_text
+
+        except Exception as e:
+            logger.error(f"Text extraction failed: {e}")
+            raise ValueError(
+                f"Failed to extract text from PDF: {e}. "
+                "Try disabling 'Text Extraction Mode' to use vision processing instead."
+            )
 
     def _calculate_cost(self, usage, model: str) -> float:
         """

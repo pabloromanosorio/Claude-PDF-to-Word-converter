@@ -353,6 +353,7 @@ async function convertDocuments() {
         margin_left: marginHorizontal,
         margin_right: marginHorizontal,
         model: document.querySelector('input[name="model"]:checked').value,
+        use_text_extraction: document.getElementById('use-text-extraction').checked,
         add_page_markers: document.getElementById('page-markers').checked,
         replace_signatures: document.getElementById('replace-signatures').checked,
         preserve_table_formatting: document.getElementById('preserve-tables').checked,
