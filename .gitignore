@@ -49,3 +49,4 @@ temp_skill/
 .env
 data/
 build_env/
+.worktrees/
