@@ -120,6 +120,52 @@ app.get('/api/download/:jobId', (req, res) => {
   res.sendFile(job.outputPath);
 });
 
+// GET /api/api-key/status - Check if API key is configured
+app.get('/api/api-key/status', (req, res) => {
+  res.json({
+    has_api_key: !!process.env.ANTHROPIC_API_KEY
+  });
+});
+
+// POST /api/api-key - Save API key to .env
+app.post('/api/api-key', express.json(), (req, res) => {
+  try {
+    const { api_key } = req.body;
+
+    if (!api_key || !api_key.startsWith('sk-ant-')) {
+      return res.status(400).json({ error: 'Invalid API key format' });
+    }
+
+    // Update .env file
+    const fs = require('fs');
+    const envPath = path.join(__dirname, '.env');
+    let envContent = '';
+
+    if (fs.existsSync(envPath)) {
+      envContent = fs.readFileSync(envPath, 'utf8');
+    }
+
+    // Update or add ANTHROPIC_API_KEY
+    if (envContent.includes('ANTHROPIC_API_KEY=')) {
+      envContent = envContent.replace(
+        /ANTHROPIC_API_KEY=.*/,
+        `ANTHROPIC_API_KEY=${api_key}`
+      );
+    } else {
+      envContent += `\nANTHROPIC_API_KEY=${api_key}\n`;
+    }
+
+    fs.writeFileSync(envPath, envContent);
+
+    // Update process.env
+    process.env.ANTHROPIC_API_KEY = api_key;
+
+    res.json({ success: true, message: 'API key saved' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Start server
 app.listen(PORT, async () => {
   const url = `http://localhost:${PORT}`;
