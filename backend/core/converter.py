@@ -85,41 +85,33 @@ class ConversionEngine:
                 - error: str (if failed)
         """
         try:
-            self._update_progress(progress_callback, 10, 'Preparing file')
+            self._update_progress(progress_callback, 10, 'Uploading file to Claude')
 
             filename = Path(file_path).stem
 
-            # Choose processing mode
-            if settings.use_text_extraction and file_path.endswith('.pdf'):
-                # TEXT EXTRACTION MODE (90% cheaper)
-                logger.info(f"Using text extraction mode for {filename}")
-                self._update_progress(progress_callback, 15, 'Extracting text from PDF')
+            # Upload file using Files API (same as chatbot)
+            with open(file_path, 'rb') as f:
+                file_upload = self.client.beta.files.upload(
+                    file=f,
+                    purpose='user_upload',
+                    betas=['files-api-2025-04-14']
+                )
 
-                extracted_text = self._extract_text_from_pdf(file_path)
-                file_base64 = None
-                media_type = None
+            file_id = file_upload.id
+            logger.info(f"Uploaded {filename} as file ID: {file_id}")
 
-                logger.info(f"Extracted {len(extracted_text)} characters from {filename}")
-            else:
-                # VISION MODE (full fidelity, expensive)
-                logger.info(f"Using vision mode for {filename}")
-                file_base64 = self._file_to_base64(file_path)
-                media_type = self._get_media_type(file_path)
-                extracted_text = None
+            self._update_progress(progress_callback, 30, 'Building conversion prompt')
 
-            self._update_progress(progress_callback, 20, 'Building conversion prompt')
-
-            # Build prompt
+            # Build prompt (same as chatbot workflow)
             prompt = build_conversion_prompt(settings, filename)
 
             logger.info(f"Converting {filename} with model {settings.model}")
-            logger.debug(f"Prompt: {prompt[:200]}...")  # Log first 200 chars
 
-            self._update_progress(progress_callback, 30, 'Calling Claude API')
+            self._update_progress(progress_callback, 40, 'Processing with Claude + docx skill')
 
-            # Make API call with retry
+            # Make API call with retry (same structure as chatbot)
             response = with_retry(
-                lambda: self._make_api_call(file_base64, media_type, prompt, settings, extracted_text),
+                lambda: self._make_api_call(file_id, prompt, settings),
                 operation_name=f"Convert {filename}"
             )
 
@@ -164,46 +156,18 @@ class ConversionEngine:
 
     def _make_api_call(
         self,
-        file_base64: Optional[str],
-        media_type: Optional[str],
+        file_id: str,
         prompt: str,
-        settings: ConversionSettings,
-        extracted_text: Optional[str] = None
+        settings: ConversionSettings
     ):
         """
-        Make the actual API call to Claude.
+        Make the actual API call to Claude (simplified - same as chatbot).
 
         Separated for retry logic.
         """
-        # Build message content based on mode
-        if extracted_text:
-            # TEXT EXTRACTION MODE - Send text only (90% cheaper!)
-            content = [
-                {
-                    'type': 'text',
-                    'text': f"{prompt}\n\n---\n\nExtracted text from PDF:\n\n{extracted_text}"
-                }
-            ]
-        else:
-            # VISION MODE - Send document for full fidelity
-            content = [
-                {
-                    'type': 'document',
-                    'source': {
-                        'type': 'base64',
-                        'media_type': media_type,
-                        'data': file_base64
-                    }
-                },
-                {
-                    'type': 'text',
-                    'text': prompt
-                }
-            ]
-
         return self.client.beta.messages.create(
             model=settings.model,
-            max_tokens=32000,  # Increased to support longer multi-page documents
+            max_tokens=32000,
             betas=[
                 'code-execution-2025-08-25',
                 'skills-2025-10-02',
@@ -218,7 +182,19 @@ class ConversionEngine:
             },
             messages=[{
                 'role': 'user',
-                'content': content
+                'content': [
+                    {
+                        'type': 'document',
+                        'source': {
+                            'type': 'file_id',
+                            'file_id': file_id
+                        }
+                    },
+                    {
+                        'type': 'text',
+                        'text': prompt
+                    }
+                ]
             }],
             tools=[{
                 'type': 'code_execution_20250825',

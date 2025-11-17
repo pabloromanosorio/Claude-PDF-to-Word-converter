@@ -33,12 +33,6 @@ class ConversionSettings(BaseModel):
     model: Literal['claude-haiku-4-5-20251001', 'claude-sonnet-4-5-20250929'] = \
         Field(default='claude-haiku-4-5-20251001', description='Claude model to use (Haiku is 3x cheaper)')
 
-    # Processing mode
-    use_text_extraction: bool = Field(
-        default=False,
-        description='Extract text instead of vision (90% cheaper, but loses images/formatting)'
-    )
-
     # Document processing options
     replace_signatures: bool = Field(default=True, description='Replace signature images with [Signature]')
     add_page_markers: bool = Field(default=True, description='Add page markers starting from page 2')
