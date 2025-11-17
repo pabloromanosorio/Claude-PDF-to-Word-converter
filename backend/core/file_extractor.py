@@ -83,20 +83,33 @@ class FileExtractor:
 
     def _extract_from_bash_result(self, response: Message) -> List[str]:
         """
-        Strategy 1: Extract from bash code execution result.
+        Strategy 1: Extract from code execution tool use (official Anthropic format).
 
-        This is the primary expected format when using docx skill.
+        Expected structure per official docs:
+        response.content[*].type == 'tool_use' AND .name == 'code_execution'
+            .content[*].file_id
 
-        Expected structure:
+        Also supports legacy format:
         response.content[*].type == 'bash_code_execution_tool_result'
-            .content.type == 'bash_code_execution_result'
-                .content[*].file_id
         """
         file_ids = []
 
         for content_block in response.content:
-            # Check for bash execution result
-            if hasattr(content_block, 'type') and \
+            # NEW: Official Anthropic format (tool_use with code_execution)
+            if hasattr(content_block, 'type') and content_block.type == 'tool_use':
+                if hasattr(content_block, 'name') and content_block.name == 'code_execution':
+                    if hasattr(content_block, 'content'):
+                        content_items = content_block.content
+                        if not isinstance(content_items, list):
+                            content_items = [content_items]
+
+                        for item in content_items:
+                            if hasattr(item, 'file_id'):
+                                file_ids.append(item.file_id)
+                                logger.debug(f"Found file_id (tool_use format): {item.file_id}")
+
+            # LEGACY: Old format (keep for backwards compatibility)
+            elif hasattr(content_block, 'type') and \
                content_block.type == 'bash_code_execution_tool_result':
 
                 # Navigate nested structure defensively
@@ -115,7 +128,7 @@ class FileExtractor:
                             for file_obj in content_items:
                                 if hasattr(file_obj, 'file_id'):
                                     file_ids.append(file_obj.file_id)
-                                    logger.debug(f"Found file_id: {file_obj.file_id}")
+                                    logger.debug(f"Found file_id (legacy format): {file_obj.file_id}")
 
         return file_ids
 
