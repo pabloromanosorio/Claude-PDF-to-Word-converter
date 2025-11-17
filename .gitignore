@@ -30,9 +30,8 @@ Thumbs.db
 # Installers (build locally)
 installers/
 
-# Node (if any remain)
+# Node
 node_modules/
-package-lock.json
 
 # Temporary files
 temp_skill/
