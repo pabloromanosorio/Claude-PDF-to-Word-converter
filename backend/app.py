@@ -61,7 +61,8 @@ class ConnectionManager:
         """Send update to specific job's WebSocket"""
         if job_id in self.active_connections:
             try:
-                await self.active_connections[job_id].send_json(update.model_dump())
+                # Use model_dump with mode='json' to apply JSON encoders (datetime -> isoformat)
+                await self.active_connections[job_id].send_json(update.model_dump(mode='json'))
             except Exception as e:
                 logger.error(f"Failed to send update to {job_id}: {e}")
                 self.disconnect(job_id)

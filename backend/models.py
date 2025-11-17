@@ -189,3 +189,8 @@ class JobUpdate(BaseModel):
     output_filename: Optional[str] = None
     actual_cost: Optional[float] = None
     error_message: Optional[str] = None
+
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
