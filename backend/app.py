@@ -302,14 +302,15 @@ async def health_check():
 
 @app.post("/api/convert")
 async def convert_document(
-    file: UploadFile = File(...),
+    pdf: UploadFile = File(..., alias="pdf"),
     settings: str = Form(...),
     page_range: Optional[str] = Form(None)
 ):
     """
     Upload and convert document.
 
-    Returns job ID for tracking progress via WebSocket.
+    Returns job ID for tracking progress via REST polling.
+    Compatible with Node.js frontend (field name 'pdf').
     """
     import json
 
@@ -319,10 +320,10 @@ async def convert_document(
         conversion_settings = ConversionSettings(**settings_dict)
 
         # Save uploaded file
-        file_data = await file.read()
+        file_data = await pdf.read()
         file_service = get_file_service()
         job_id = str(uuid.uuid4())
-        file_path = file_service.get_file_path(job_id, file.filename)
+        file_path = file_service.get_file_path(job_id, pdf.filename)
         file_path.write_bytes(file_data)
 
         # Get page count
@@ -335,7 +336,7 @@ async def convert_document(
         # Create job record
         job_data = {
             'id': job_id,
-            'filename': file.filename,
+            'filename': pdf.filename,
             'file_size': len(file_data),
             'page_count': page_count,
             'page_range': page_range,
@@ -351,12 +352,13 @@ async def convert_document(
         # Start conversion in background
         asyncio.create_task(process_conversion(job_id, str(file_path)))
 
-        logger.info(f"Created job {job_id} for {file.filename}")
+        logger.info(f"Created job {job_id} for {pdf.filename}")
 
+        # Match Node.js response format (jobId not job_id)
         return {
-            "job_id": job_id,
+            "jobId": job_id,
             "status": "queued",
-            "estimated_cost": estimate.model_dump()
+            "message": "Conversion started"
         }
 
     except Exception as e:
@@ -364,25 +366,29 @@ async def convert_document(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/jobs/{job_id}")
+@app.get("/api/jobs/{job_id}/status")
 async def get_job_status(job_id: str):
-    """Get job status"""
+    """Get job status - compatible with Node.js frontend (camelCase)"""
     job_record = get_job(job_id)
 
     if not job_record:
         raise HTTPException(status_code=404, detail="Job not found")
 
+    # Match Node.js response format (camelCase)
     return {
         "id": job_record.id,
         "filename": job_record.filename,
+        "fileSize": job_record.file_size,
         "status": job_record.status,
-        "progress": job_record.progress,
-        "current_step": job_record.current_step,
-        "estimated_cost_avg": job_record.estimated_cost_avg,
-        "actual_cost": job_record.actual_cost,
-        "output_filename": job_record.output_filename,
-        "error_message": job_record.error_message,
-        "created_at": job_record.created_at.isoformat() if job_record.created_at else None
+        "progress": job_record.progress or 0,
+        "currentStep": job_record.current_step or "Queued",
+        "outputPath": job_record.output_filename,
+        "error": job_record.error_message,
+        "inputTokens": job_record.input_tokens,
+        "outputTokens": job_record.output_tokens,
+        "actualCost": job_record.actual_cost,
+        "createdAt": job_record.created_at.timestamp() * 1000 if job_record.created_at else None,
+        "completedAt": job_record.completed_at.timestamp() * 1000 if job_record.completed_at else None
     }
 
 
@@ -533,10 +539,12 @@ async def get_storage_info():
     return file_service.get_storage_stats()
 
 
-# Mount frontend static files
+# Mount frontend files (serves js, css, etc.)
 frontend_dir = Path(__file__).parent.parent / 'frontend'
 if frontend_dir.exists():
-    app.mount("/static", StaticFiles(directory=str(frontend_dir)), name="static")
+    # Serve JS and other assets
+    app.mount("/js", StaticFiles(directory=str(frontend_dir / 'js')), name="js")
+    # Future: add /css if needed
 
 
 if __name__ == "__main__":
