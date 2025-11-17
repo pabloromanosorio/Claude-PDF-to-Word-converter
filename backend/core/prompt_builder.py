@@ -24,14 +24,18 @@ def build_conversion_prompt(settings: ConversionSettings, filename: str) -> str:
     """
 
     # Base prompt - Let docx skill do its thing, but be comprehensive
-    prompt = f"""Convert this ENTIRE document (ALL PAGES) to Word (.docx) format using the docx skill.
+    prompt = f"""Convert this ENTIRE PDF document to Word (.docx) format using the docx skill.
 
-**CRITICAL: Process every single page - do not stop after page 1.**
+**CRITICAL INSTRUCTION - YOU MUST FOLLOW THIS:**
+Process EVERY SINGLE PAGE from the first page to the LAST page of the PDF.
+DO NOT stop after page 1. DO NOT stop after page 2.
+Continue until you have processed ALL pages in the document.
 
 **Be Comprehensive:**
-- Include ALL text: body, headers, footers, sidebars, captions, footnotes
-- Include ALL pages from start to finish
-- Don't skip or summarize anything
+- Include ALL text from ALL pages: body, headers, footers, sidebars, captions, footnotes
+- Process the complete document from start to finish
+- Don't skip, truncate, or summarize anything
+- Convert every page you see
 """
 
     # Add table preservation if requested (tables are a common pain point)
@@ -90,14 +94,18 @@ def build_cached_prompt_parts(settings: ConversionSettings) -> Dict[str, str]:
     """
 
     # Static part (cacheable) - doesn't change between batches
-    static_instructions = """Convert this ENTIRE document (ALL PAGES) to Word (.docx) format using the docx skill.
+    static_instructions = """Convert this ENTIRE PDF document to Word (.docx) format using the docx skill.
 
-**CRITICAL: Process every single page - do not stop after page 1.**
+**CRITICAL INSTRUCTION - YOU MUST FOLLOW THIS:**
+Process EVERY SINGLE PAGE from the first page to the LAST page of the PDF.
+DO NOT stop after page 1. DO NOT stop after page 2.
+Continue until you have processed ALL pages in the document.
 
 **Be Comprehensive:**
-- Include ALL text: body, headers, footers, sidebars, captions, footnotes
-- Include ALL pages from start to finish
-- Don't skip or summarize anything
+- Include ALL text from ALL pages: body, headers, footers, sidebars, captions, footnotes
+- Process the complete document from start to finish
+- Don't skip, truncate, or summarize anything
+- Convert every page you see
 """
 
     # Add table preservation if requested (goes in static part if always enabled)

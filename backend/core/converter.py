@@ -161,7 +161,7 @@ class ConversionEngine:
         """
         return self.client.beta.messages.create(
             model=settings.model,
-            max_tokens=16000,
+            max_tokens=32000,  # Increased to support longer multi-page documents
             betas=[
                 'code-execution-2025-08-25',
                 'skills-2025-10-02',
