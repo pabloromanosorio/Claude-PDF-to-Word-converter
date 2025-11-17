@@ -11,7 +11,6 @@
 // State
 let selectedFiles = [];
 let jobs = {}; // Map of job_id -> job data
-let websockets = {}; // Map of job_id -> WebSocket
 
 // API base URL
 const API_BASE = window.location.origin;
@@ -290,52 +289,30 @@ function clearAllFiles() {
     document.getElementById('cost-estimate').classList.add('hidden');
 }
 
-// Estimate costs for all files
+// Estimate costs for all files (simplified client-side calculation)
 async function estimateCosts() {
-    if (selectedFiles.length === 0) return;
+    if (selectedFiles.length === 0) {
+        document.getElementById('cost-estimate').classList.add('hidden');
+        return;
+    }
 
     const model = document.querySelector('input[name="model"]:checked').value;
 
-    try {
-        let totalPages = 0;
-        let totalLow = 0;
-        let totalAvg = 0;
-        let totalHigh = 0;
+    // Simplified cost estimation based on model
+    // Haiku: ~$0.08/file, Sonnet: ~$0.20/file (rough average for typical PDFs)
+    const costPerFile = model === 'claude-haiku-4-5-20251001' ? 0.08 : 0.20;
+    const totalFiles = selectedFiles.length;
 
-        // For each file, estimate cost
-        for (const file of selectedFiles) {
-            const formData = new FormData();
-            formData.append('file', file);
-            formData.append('model', model);
-
-            const response = await fetch(`${API_BASE}/api/estimate-cost`, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (response.ok) {
-                const estimate = await response.json();
-                totalPages += estimate.page_count;
-                totalLow += estimate.estimated_cost_low;
-                totalAvg += estimate.estimated_cost_avg;
-                totalHigh += estimate.estimated_cost_high;
-            }
-        }
-
-        // Display total estimate
-        document.getElementById('est-files').textContent = selectedFiles.length;
-        document.getElementById('est-pages').textContent = totalPages;
-        document.getElementById('est-low').textContent = totalLow.toFixed(4);
-        document.getElementById('est-avg').textContent = totalAvg.toFixed(4);
-        document.getElementById('est-high').textContent = totalHigh.toFixed(4);
-        document.getElementById('cost-estimate').classList.remove('hidden');
-
-    } catch (error) {
-        console.error('Failed to estimate costs:', error);
-    }
+    // Display simplified estimates
+    document.getElementById('est-files').textContent = totalFiles;
+    document.getElementById('est-pages').textContent = 'TBD';
+    document.getElementById('est-low').textContent = (totalFiles * costPerFile * 0.8).toFixed(4);
+    document.getElementById('est-avg').textContent = (totalFiles * costPerFile).toFixed(4);
+    document.getElementById('est-high').textContent = (totalFiles * costPerFile * 1.5).toFixed(4);
+    document.getElementById('cost-estimate').classList.remove('hidden');
 }
 
-// Convert all documents - BATCH PROCESSING
+// Convert all documents - Individual file processing with REST polling
 async function convertDocuments() {
     if (selectedFiles.length === 0) return;
 
@@ -345,69 +322,75 @@ async function convertDocuments() {
     const marginHorizontal = parseFloat(document.getElementById('margin-horizontal').value);
 
     const settings = {
-        override_formatting: overrideFormatting,
+        overrideFormatting: overrideFormatting,
         font: 'Arial',
-        font_size: 12,
-        margin_top: marginVertical,
-        margin_bottom: marginVertical,
-        margin_left: marginHorizontal,
-        margin_right: marginHorizontal,
+        fontSize: 12,
+        margins: {
+            top: marginVertical * 1440,
+            bottom: marginVertical * 1440,
+            left: marginHorizontal * 1440,
+            right: marginHorizontal * 1440
+        },
         model: document.querySelector('input[name="model"]:checked').value,
-        add_page_markers: document.getElementById('page-markers').checked,
-        replace_signatures: document.getElementById('replace-signatures').checked,
-        preserve_table_formatting: document.getElementById('preserve-tables').checked,
-        handle_merged_cells: true
+        enableLogging: localStorage.getItem('enableLogging') === 'true',
+        addPageMarkers: document.getElementById('page-markers').checked,
+        replaceSignatures: document.getElementById('replace-signatures').checked,
+        preserveTableFormatting: document.getElementById('preserve-tables').checked
     };
 
-    console.log('Batch converting with settings:', settings);
+    console.log('Converting files with settings:', settings);
 
     // Hide file selection, show progress
     document.getElementById('convert-btn').disabled = true;
     document.getElementById('progress-container').classList.remove('hidden');
     document.getElementById('error-section').classList.add('hidden');
 
+    // Create progress items for each file
+    const progressList = document.getElementById('progress-list');
+    progressList.innerHTML = '';
+
     try {
-        // Upload all files
-        const formData = new FormData();
-        selectedFiles.forEach(file => {
-            formData.append('files', file);
-        });
-        formData.append('settings', JSON.stringify(settings));
+        // Convert each file individually
+        for (const file of selectedFiles) {
+            const formData = new FormData();
+            formData.append('pdf', file);
+            formData.append('settings', JSON.stringify(settings));
 
-        const response = await fetch(`${API_BASE}/api/convert-batch`, {
-            method: 'POST',
-            body: formData
-        });
+            const response = await fetch(`${API_BASE}/api/convert`, {
+                method: 'POST',
+                body: formData
+            });
 
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Batch conversion failed');
-        }
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Conversion failed');
+            }
 
-        const result = await response.json();
-        console.log('Batch created:', result);
+            const result = await response.json();
+            console.log('Job created:', result);
 
-        // Create progress items for each job
-        const progressList = document.getElementById('progress-list');
-        progressList.innerHTML = '';
-
-        result.jobs.forEach(jobInfo => {
-            jobs[jobInfo.job_id] = {
-                ...jobInfo,
+            // Create progress item
+            jobs[result.jobId] = {
+                job_id: result.jobId,
+                filename: file.name,
                 status: 'queued',
                 progress: 0,
-                step: 'Queued'
+                currentStep: 'Queued'
             };
 
-            const progressItem = createProgressItem(jobInfo);
+            const progressItem = createProgressItem({
+                job_id: result.jobId,
+                filename: file.name,
+                page_count: '?'
+            });
             progressList.appendChild(progressItem);
 
-            // Connect WebSocket for this job
-            connectWebSocket(jobInfo.job_id);
-        });
+            // Start polling for this job
+            pollJobStatus(result.jobId);
+        }
 
     } catch (error) {
-        console.error('Batch conversion error:', error);
+        console.error('Conversion error:', error);
         showError(error.message);
         document.getElementById('convert-btn').disabled = false;
     }
@@ -444,30 +427,40 @@ function createProgressItem(jobInfo) {
     return div;
 }
 
-// Connect WebSocket for individual job
-function connectWebSocket(jobId) {
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//${window.location.host}/ws/jobs/${jobId}`;
+// Poll job status using REST API
+function pollJobStatus(jobId) {
+    const interval = setInterval(async () => {
+        try {
+            const response = await fetch(`${API_BASE}/api/jobs/${jobId}/status`);
 
-    const ws = new WebSocket(wsUrl);
-    websockets[jobId] = ws;
+            if (!response.ok) {
+                clearInterval(interval);
+                return;
+            }
 
-    ws.onopen = () => {
-        console.log(`WebSocket connected for job ${jobId}`);
-    };
+            const job = await response.json();
 
-    ws.onmessage = (event) => {
-        const update = JSON.parse(event.data);
-        handleJobUpdate(jobId, update);
-    };
+            // Update job data
+            const update = {
+                status: job.status,
+                progress: job.progress,
+                step: job.currentStep,
+                actual_cost: job.actualCost,
+                error_message: job.error
+            };
 
-    ws.onerror = (error) => {
-        console.error(`WebSocket error for job ${jobId}:`, error);
-    };
+            handleJobUpdate(jobId, update);
 
-    ws.onclose = () => {
-        console.log(`WebSocket closed for job ${jobId}`);
-    };
+            // Stop polling if job is completed or failed
+            if (job.status === 'completed' || job.status === 'failed') {
+                clearInterval(interval);
+            }
+
+        } catch (error) {
+            console.error(`Polling error for job ${jobId}:`, error);
+            clearInterval(interval);
+        }
+    }, 2000); // Poll every 2 seconds
 }
 
 // Handle individual job update

@@ -166,6 +166,21 @@ app.post('/api/api-key', express.json(), (req, res) => {
   }
 });
 
+// GET /api/stats - Get usage statistics (stub for now)
+app.get('/api/stats', (req, res) => {
+  // Calculate stats from current jobs
+  const allJobs = Array.from(jobManager.jobs.values());
+  const completedJobs = allJobs.filter(job => job.status === 'completed');
+
+  const stats = {
+    total_conversions: completedJobs.length,
+    total_pages: 0, // Not tracked yet
+    total_cost: completedJobs.reduce((sum, job) => sum + (job.actualCost || 0), 0)
+  };
+
+  res.json(stats);
+});
+
 // Start server
 app.listen(PORT, async () => {
   const url = `http://localhost:${PORT}`;
