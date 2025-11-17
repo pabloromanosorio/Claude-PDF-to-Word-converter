@@ -13,6 +13,7 @@ import asyncio
 import logging
 import uuid
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
@@ -144,7 +145,7 @@ async def process_conversion(job_id: str, file_path: str):
         settings = ConversionSettings(**job_record.settings)
 
         # Update status
-        update_job(job_id, status='processing', started_at=asyncio.get_event_loop().time())
+        update_job(job_id, status='processing', started_at=datetime.now())
         await manager.send_update(job_id, JobUpdate(
             job_id=job_id,
             status='processing',
@@ -198,7 +199,7 @@ async def process_conversion(job_id: str, file_path: str):
                 input_tokens=result['input_tokens'],
                 output_tokens=result['output_tokens'],
                 cached_tokens=result['cached_tokens'],
-                completed_at=asyncio.get_event_loop().time()
+                completed_at=datetime.now()
             )
 
             # Update usage statistics
@@ -229,7 +230,7 @@ async def process_conversion(job_id: str, file_path: str):
                 job_id,
                 status='failed',
                 error_message=result['error'],
-                completed_at=asyncio.get_event_loop().time()
+                completed_at=datetime.now()
             )
 
             # Send error update
@@ -251,7 +252,7 @@ async def process_conversion(job_id: str, file_path: str):
             job_id,
             status='failed',
             error_message=str(e),
-            completed_at=asyncio.get_event_loop().time()
+            completed_at=datetime.now()
         )
 
         # Send error update

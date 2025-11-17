@@ -186,9 +186,16 @@ def save_job(job_data: dict) -> JobRecord:
 
 
 def get_job(job_id: str) -> Optional[JobRecord]:
-    """Get job by ID"""
+    """Get job by ID with eagerly loaded attributes"""
     with db_session() as session:
-        return session.query(JobRecord).filter(JobRecord.id == job_id).first()
+        job = session.query(JobRecord).filter(JobRecord.id == job_id).first()
+        if job:
+            # Force load all attributes before session closes to avoid DetachedInstanceError
+            _ = job.settings
+            _ = job.filename
+            _ = job.status
+            session.expunge(job)  # Detach from session so it can be used outside
+        return job
 
 
 def update_job(job_id: str, **kwargs) -> bool:
