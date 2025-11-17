@@ -30,8 +30,12 @@ Thumbs.db
 # Installers (build locally)
 installers/
 
-# Node
+# Node.js
 node_modules/
+npm-debug.log*
+
+# Temporary conversion files
+/tmp/conversion-*
 
 # Temporary files
 temp_skill/
