@@ -8,6 +8,7 @@ const PORT = process.env.PORT || 3000;
 
 const multer = require('multer');
 const { validateUpload } = require('./lib/validator');
+const { validateSettings } = require('./lib/settingsValidator');
 const JobManager = require('./lib/jobManager');
 const { convertPdf } = require('./lib/convertPdf');
 
@@ -41,8 +42,16 @@ app.post('/api/convert', upload.single('pdf'), async (req, res) => {
     // Validate upload
     validateUpload(req.file);
 
-    // Parse settings
-    const settings = req.body.settings ? JSON.parse(req.body.settings) : {};
+    // Parse and validate settings
+    let settings = {};
+    if (req.body.settings) {
+      // Limit settings JSON size to prevent DOS
+      if (req.body.settings.length > 10000) {
+        throw new Error('Settings JSON too large (max 10KB)');
+      }
+      settings = JSON.parse(req.body.settings);
+      settings = validateSettings(settings);
+    }
 
     // Create job
     const job = jobManager.createJob(
