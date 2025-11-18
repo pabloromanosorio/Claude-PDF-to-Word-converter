@@ -1,263 +1,153 @@
-# PDF to Word Converter v2.0
+# PDF to DOCX Converter v2.0
 
-Complete rebuild with focus on reliability, cost optimization, and user experience.
+Convert PDF documents to editable Word files using Claude AI's **docx skill**.
 
-## What's New in v2.0
+## Features
 
-### 🚀 Performance & Cost
-- **70% prompt reduction** (400 → 120 tokens)
-- **90% cost savings with caching** on batch conversions
-- **50-70% total cost reduction** vs v1
-
-### 🛡️ Reliability
-- **Multi-strategy file extraction** (won't break on API changes)
-- **Comprehensive retry logic** (handles 500, 502, 503, 504, 529 errors)
-- **4 fallback extraction strategies**
-- **Detailed error logging** for debugging
-
-### 📊 Features
-- **Real-time WebSocket progress** updates
-- **Complex table handling** (merged cells, nested tables, formatting)
-- **Usage statistics** and cost tracking
-- **SQLite database** (better than JSON files)
-- **Automatic file cleanup**
-
-### 🏗️ Architecture
-- **FastAPI** (async, modern, WebSocket support)
-- **Pydantic** (type-safe models)
-- **SQLAlchemy** (robust database ORM)
-- **Optimized prompts** with special table emphasis
+- ✅ Convert multi-page PDFs to DOCX
+- ✅ Preserve tables, formatting, special characters
+- ✅ Real-time progress tracking
+- ✅ Cost tracking ($0.05-0.24 per document)
+- ✅ Two models: Haiku (fast/cheap) or Sonnet (better quality)
+- ✅ API key management via UI
+- ✅ Uses Claude's built-in docx skill (reliable)
 
 ## Quick Start
-
-### Prerequisites
-- Python 3.9+
-- Anthropic API key
 
 ### Installation
 
 ```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Set API key (or configure via UI)
-export ANTHROPIC_API_KEY='sk-ant-...'
-
-# Run server
-python backend/app.py
+npm install
 ```
 
-Server starts at: http://localhost:8000
+### Configuration
+
+1. Create `.env` file:
+```bash
+cp .env.example .env
+```
+
+2. Add your Anthropic API key to `.env`:
+```
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+```
+
+### Run
+
+```bash
+npm start
+```
+
+Server starts on http://localhost:3000 and opens browser automatically.
+
+## Architecture
+
+**Simple Node.js backend:**
+- Express server
+- Claude API with Skills API (docx skill)
+- Files API for upload/download
+- In-memory job tracking
+
+**How it works:**
+1. Upload PDF to Claude via Files API
+2. Claude uses docx skill to convert (generates & executes code remotely)
+3. Download the generated DOCX file
+
+See `HOW_SKILLS_WORK.md` for detailed explanation.
+
+## API Endpoints
+
+- `POST /api/convert` - Upload and convert PDF
+- `GET /api/jobs/:id/status` - Check conversion status
+- `GET /api/download/:id` - Download converted file
+- `GET /api/api-key/status` - Check API key configuration
+- `POST /api/api-key` - Save API key
+- `GET /api/stats` - Usage statistics
+- `GET /api/health` - Health check
+
+## Development
+
+```bash
+npm run dev      # Start with nodemon
+npm test         # Run tests
+npm run server   # Start server only (no auto-open)
+```
+
+## Cost Estimates
+
+| Document Size | Haiku 4.5 | Sonnet 4.5 |
+|--------------|-----------|------------|
+| 3 pages | $0.05-0.10 | $0.15-0.24 |
+| 10 pages | $0.15-0.25 | $0.40-0.60 |
+| 100 pages | $1.50-2.50 | $4.00-6.00 |
 
 ## Project Structure
 
 ```
-v2/
-├── backend/
-│   ├── app.py                 # FastAPI application
-│   ├── models.py              # Pydantic models
-│   ├── database.py            # SQLAlchemy database
-│   ├── config.py              # Configuration management
-│   │
-│   ├── core/
-│   │   ├── converter.py       # Main conversion engine
-│   │   ├── prompt_builder.py  # Optimized prompts (120 tokens)
-│   │   ├── file_extractor.py  # Multi-strategy extraction
-│   │   └── retry_handler.py   # Comprehensive retry logic
-│   │
-│   └── services/
-│       ├── cost_service.py    # Cost calculation
-│       └── file_service.py    # File management
-│
-├── frontend/              # UI (to be added)
-├── tests/                 # Tests (to be added)
-├── docker/                # Docker setup (to be added)
-└── requirements.txt       # Python dependencies
+├── server.js           # Express server
+├── lib/
+│   ├── convertPdf.js   # Conversion engine (Skills API)
+│   ├── jobManager.js   # In-memory job tracking
+│   └── validator.js    # Upload validation
+├── frontend/
+│   ├── index.html      # Web UI
+│   └── js/app.js       # Frontend logic
+├── package.json        # Node.js dependencies
+└── .env.example        # Environment variables template
 ```
-
-## API Endpoints
-
-### Conversion
-- `POST /api/convert` - Upload and convert document
-- `GET /api/jobs/{job_id}` - Get job status
-- `GET /api/download/{job_id}` - Download result
-- `WS /ws/jobs/{job_id}` - Real-time progress updates
-
-### Configuration
-- `GET /api/settings` - Get default settings
-- `POST /api/settings` - Save default settings
-- `POST /api/api-key` - Save API key
-- `GET /api/api-key/status` - Check if API key configured
-
-### Statistics
-- `GET /api/stats` - Usage statistics
-- `GET /api/storage` - Storage information
-- `GET /api/health` - Health check
-
-## Key Improvements Over v1
-
-### 1. Optimized Prompts
-```python
-# v1: ~400 tokens
-"""Convert this scanned document to professional Word (.docx) format.
-... (136 lines of verbose instructions) ..."""
-
-# v2: ~120 tokens (70% reduction)
-"""Convert this document to Word (.docx) format.
-**Output Settings:** Font: Arial 12pt, Margins: 1.0" all sides
-**Text Extraction:** Extract all text exactly as shown.
-**Table Handling (CRITICAL):** Preserve exact structure, merged cells, formatting.
-**Generate Document:** Use docx skill."""
-```
-
-### 2. Multi-Strategy File Extraction
-```python
-# v1: Single strategy (breaks on API changes)
-file_ids.append(item.content.content.file_id)  # Crashes if structure changes
-
-# v2: 4 fallback strategies
-strategies = [
-    extract_from_bash_result,      # Primary
-    extract_from_text_patterns,     # Fallback 1
-    extract_from_metadata,          # Fallback 2
-    extract_from_content_inspection # Fallback 3 (last resort)
-]
-```
-
-### 3. Comprehensive Retry Logic
-```python
-# v1: Only retries 429, 529
-if error_code in [429, 529]:
-    retry()
-
-# v2: Retries all recoverable errors
-retryable = {429, 500, 502, 503, 504, 529}
-# + Network errors, timeouts
-# + Exponential backoff with jitter
-# + Special handling for rate limits
-```
-
-### 4. Real-Time Progress
-```python
-# v1: No progress updates (Flask limitation)
-# User sees nothing during 30s conversion
-
-# v2: WebSocket updates
-ws = new WebSocket('/ws/jobs/{id}');
-ws.onmessage = (event) => {
-    // { progress: 67, step: "Processing page 10 of 15..." }
-};
-```
-
-## Cost Comparison
-
-**100-page document example:**
-
-| Metric | v1 | v2 | Savings |
-|--------|----|----|---------|
-| Prompt tokens/batch | 400 | 120 | 70% |
-| Total batches | 7 | 7 | - |
-| Prompt tokens (total) | 2,800 | 192 (with caching) | 93% |
-| Prompt cost (Sonnet) | $0.0084 | $0.0006 | $0.0078 |
-
-**Annual savings (100 docs/month):** ~$9.36 in prompt costs alone
-
-## Development Status
-
-✅ Backend core complete
-- Models, database, configuration
-- Conversion engine with caching
-- Multi-strategy extraction
-- Comprehensive retry logic
-- FastAPI routes
-- WebSocket progress
-
-🚧 In Progress
-- Frontend UI
-- Tests
-- Docker setup
-- PyInstaller builds
-- Documentation
-
-## Testing
-
-```bash
-# Run tests (when added)
-pytest tests/
-
-# Test API directly
-curl -X GET http://localhost:8000/api/health
-
-# Test conversion
-curl -X POST http://localhost:8000/api/convert \
-  -F "file=@test.pdf" \
-  -F "settings={\"model\":\"claude-haiku-4-5-20251001\"}"
-```
-
-## Configuration
-
-### Database
-- Location: `~/.pdf-converter/converter_v2.db`
-- Type: SQLite
-- Tables: jobs, config, daily_usage
-
-### File Storage
-- Uploads: `~/.pdf-converter/uploads/`
-- Retention: 24 hours
-- Max storage: 500 MB
-- Auto-cleanup: Every hour
-
-### API Keys
-- Encrypted with Fernet (AES-128)
-- Stored in database
-- Encryption key: `~/.pdf-converter/.encryption_key_v2` (chmod 600)
 
 ## Troubleshooting
 
-### API Key Issues
-```bash
-# Check if API key is configured
-curl http://localhost:8000/api/api-key/status
+### "No DOCX file generated"
 
-# Set API key
-curl -X POST http://localhost:8000/api/api-key \
-  -H "Content-Type: application/json" \
-  -d '{"api_key":"sk-ant-..."}'
+**Cause:** Skills API might not be available or file extraction failed.
+
+**Solution:**
+1. Check terminal logs for detailed error
+2. Enable logging in UI (Settings → Enable Logging)
+3. Verify API key has access to Skills API
+4. Try with a simpler PDF first
+
+### "ANTHROPIC_API_KEY not configured"
+
+**Solution:**
+```bash
+# Add to .env
+echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
+
+# Restart server
+npm start
 ```
 
-### Database Issues
-```bash
-# Reset database (CAUTION: deletes all data)
-rm ~/.pdf-converter/converter_v2.db
+See `DEBUGGING.md` for comprehensive troubleshooting.
 
-# Restart server (will recreate database)
-python backend/app.py
-```
+## Documentation
 
-### File Cleanup
-```bash
-# Manual cleanup
-rm -rf ~/.pdf-converter/uploads/*
+- **`HOW_SKILLS_WORK.md`** - Detailed explanation of Skills API approach
+- **`DEBUGGING.md`** - Troubleshooting guide
+- **`NODEJS_REWRITE_SUMMARY.md`** - Why the rewrite was necessary
 
-# Check storage
-curl http://localhost:8000/api/storage
-```
+## What Changed in v2.0
 
-## Contributing
+**v1.0 (Broken):**
+- Asked Claude to generate JavaScript code
+- Tried to execute generated code locally
+- Had syntax errors and reliability issues
 
-This is a personal use application being shared with colleagues. Feel free to:
-- Report issues
-- Suggest improvements
-- Submit pull requests
+**v2.0 (Working):**
+- Uses Claude's Skills API properly
+- Claude generates AND executes code remotely
+- Reliable, secure, proven approach
+
+The key insight: **Let Claude execute the code in its own environment** instead of trying to run it locally.
 
 ## License
 
-Personal use - Not for commercial distribution
+MIT
 
 ## Support
 
-For issues or questions, check:
-1. Logs: Application logs in terminal
-2. Database: Check `~/.pdf-converter/converter_v2.db`
-3. Storage: Check `/api/storage` endpoint
-4. Health: Check `/api/health` endpoint
+For issues or questions:
+1. Check terminal logs (enable logging in Settings)
+2. See `DEBUGGING.md` for common issues
+3. Review `HOW_SKILLS_WORK.md` to understand the architecture
