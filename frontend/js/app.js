@@ -446,6 +446,8 @@ function pollJobStatus(jobId) {
                 progress: job.progress,
                 step: job.currentStep,
                 actual_cost: job.actualCost,
+                input_tokens: job.inputTokens,
+                output_tokens: job.outputTokens,
                 error_message: job.error
             };
 
@@ -485,12 +487,20 @@ function handleJobUpdate(jobId, update) {
 
     if (update.status === 'completed' && resultEl) {
         resultEl.classList.remove('hidden');
+        const inputTokens = update.input_tokens || 0;
+        const outputTokens = update.output_tokens || 0;
+        const totalTokens = inputTokens + outputTokens;
         resultEl.innerHTML = `
-            <div class="flex items-center justify-between bg-green-50 p-2 rounded">
-                <span class="text-xs text-green-700">Cost: $${(update.actual_cost || 0).toFixed(4)}</span>
-                <button onclick="downloadFile('${jobId}')" class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">
-                    Download
-                </button>
+            <div class="bg-green-50 p-2 rounded">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs text-green-700">Cost: $${(update.actual_cost || 0).toFixed(4)}</span>
+                    <button onclick="downloadFile('${jobId}')" class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">
+                        Download
+                    </button>
+                </div>
+                <div class="text-xs text-green-600">
+                    Tokens: ${totalTokens.toLocaleString()} total (${inputTokens.toLocaleString()} in, ${outputTokens.toLocaleString()} out)
+                </div>
             </div>
         `;
         loadUsageStats(); // Refresh stats
