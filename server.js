@@ -180,17 +180,19 @@ app.post('/api/api-key', express.json(), (req, res) => {
 
 // GET /api/stats - Get usage statistics (stub for now)
 app.get('/api/stats', (req, res) => {
-  // Calculate stats from current jobs
-  const allJobs = Array.from(jobManager.jobs.values());
-  const completedJobs = allJobs.filter(job => job.status === 'completed');
+  const stats = jobManager.getStats();
 
-  const stats = {
-    total_conversions: completedJobs.length,
-    total_pages: 0, // Not tracked yet
-    total_cost: completedJobs.reduce((sum, job) => sum + (job.actualCost || 0), 0)
+  // Add current active jobs to stats for real-time view
+  const allJobs = Array.from(jobManager.jobs.values());
+  const completedJobs = allJobs.filter(job => job.status === 'completed' && !job.statsRecorded);
+
+  const responseStats = {
+    total_conversions: stats.total_conversions + completedJobs.length,
+    total_pages: stats.total_pages,
+    total_cost: stats.total_cost + completedJobs.reduce((sum, job) => sum + (job.actualCost || 0), 0)
   };
 
-  res.json(stats);
+  res.json(responseStats);
 });
 
 // Start server

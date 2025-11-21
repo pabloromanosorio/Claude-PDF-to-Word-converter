@@ -122,8 +122,8 @@ async function saveApiKey() {
     try {
         const response = await fetch(`${API_BASE}/api/api-key`, {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({api_key: apiKey})
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ api_key: apiKey })
         });
 
         if (!response.ok) {
@@ -276,10 +276,10 @@ function updateFilesList() {
 }
 
 // Remove file from selection
-window.removeFile = function(index) {
+window.removeFile = function (index) {
     selectedFiles.splice(index, 1);
     updateFilesList();
-    
+
     if (selectedFiles.length === 0) {
         document.getElementById('convert-btn').disabled = true;
         document.getElementById('cost-estimate').classList.add('hidden');
@@ -507,7 +507,7 @@ function handleJobUpdate(jobId, update) {
                 <div class="flex items-center justify-between mb-1">
                     <span class="text-xs text-green-700">Cost: $${(update.actual_cost || 0).toFixed(4)}</span>
                     <button onclick="downloadFile('${jobId}')" class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">
-                        Download
+                        Download Again
                     </button>
                 </div>
                 <div class="text-xs text-green-600">
@@ -515,6 +515,16 @@ function handleJobUpdate(jobId, update) {
                 </div>
             </div>
         `;
+
+        // Auto-download if not already downloaded
+        if (!jobs[jobId].autoDownloaded) {
+            jobs[jobId].autoDownloaded = true;
+            downloadFile(jobId);
+        }
+
+        // Show "Start New" button if all jobs are done
+        checkAllJobsComplete();
+
         loadUsageStats(); // Refresh stats
     } else if (update.status === 'failed' && resultEl) {
         resultEl.classList.remove('hidden');
@@ -538,7 +548,7 @@ function getStatusClass(status) {
 }
 
 // Download individual file
-window.downloadFile = async function(jobId) {
+window.downloadFile = async function (jobId) {
     try {
         const response = await fetch(`${API_BASE}/api/download/${jobId}`);
 
@@ -581,6 +591,53 @@ async function loadUsageStats() {
     } catch (error) {
         console.error('Failed to load stats:', error);
     }
+}
+
+// Check if all jobs are complete
+function checkAllJobsComplete() {
+    const allJobs = Object.values(jobs);
+    const allComplete = allJobs.every(job => job.status === 'completed' || job.status === 'failed');
+
+    if (allComplete && allJobs.length > 0) {
+        // Show start new button
+        const container = document.getElementById('progress-container');
+
+        // Remove existing button if any
+        const existingBtn = document.getElementById('start-new-btn');
+        if (existingBtn) existingBtn.remove();
+
+        const btnDiv = document.createElement('div');
+        btnDiv.className = 'mt-6 text-center';
+        btnDiv.innerHTML = `
+            <button id="start-new-btn" onclick="startNewConversion()" class="bg-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-purple-700 shadow-lg transition-all transform hover:scale-105">
+                Start New Conversion
+            </button>
+        `;
+        container.appendChild(btnDiv);
+    }
+}
+
+// Start new conversion
+window.startNewConversion = function () {
+    // Reset state
+    selectedFiles = [];
+    jobs = {};
+
+    // Reset UI
+    document.getElementById('progress-container').classList.add('hidden');
+    document.getElementById('progress-list').innerHTML = '';
+    document.getElementById('selected-files').classList.add('hidden');
+    document.getElementById('selected-files-list').innerHTML = '';
+    document.getElementById('convert-btn').disabled = true;
+    document.getElementById('cost-estimate').classList.add('hidden');
+    document.getElementById('file-input').value = '';
+
+    // Remove start new button
+    const btn = document.getElementById('start-new-btn');
+    if (btn) btn.parentElement.remove();
+
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 // Format file size
