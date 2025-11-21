@@ -204,6 +204,19 @@
                         <p class="text-xs text-gray-500 mt-2">💡 These will override the original document's formatting</p>
                     </div>
 
+                    <!-- Page Range Selection -->
+                    <div class="mb-5">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Page Range (Optional)
+                        </label>
+                        <input type="text" id="page-range"
+                               placeholder="e.g., 1-5, 7, 9-12 or leave empty for all pages"
+                               class="w-full input-modern rounded-lg px-4 py-3 text-sm focus:outline-none">
+                        <p class="text-xs text-gray-500 mt-1">
+                            Leave empty to convert all pages, or specify pages/ranges (e.g., "1-5, 7, 9-12")
+                        </p>
+                    </div>
+
                     <!-- Options -->
                     <div class="space-y-3">
                         <label class="flex items-center p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
@@ -218,6 +231,21 @@
                             <input type="checkbox" id="preserve-tables" checked class="mr-3 w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
                             <span class="text-sm text-gray-700 font-medium">Preserve complex table formatting</span>
                         </label>
+                    </div>
+
+                    <!-- Custom Instructions -->
+                    <div class="mt-5">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            Custom Instructions (Optional)
+                        </label>
+                        <textarea id="custom-instructions"
+                                  placeholder="Add any specific instructions for the conversion (e.g., 'Keep footnotes at bottom of each page', 'Convert currency symbols to text', etc.)"
+                                  class="w-full input-modern rounded-lg px-4 py-3 text-sm resize-none focus:outline-none"
+                                  rows="3"
+                                  maxlength="5000"></textarea>
+                        <p class="text-xs text-gray-500 mt-1">
+                            <span id="custom-instructions-count">0</span>/5000 characters
+                        </p>
                     </div>
                 </div>
 

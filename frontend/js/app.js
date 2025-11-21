@@ -81,6 +81,13 @@ function setupEventListeners() {
             if (selectedFiles.length > 0) estimateCosts();
         });
     });
+
+    // Custom instructions character counter
+    const customInstructionsInput = document.getElementById('custom-instructions');
+    const customInstructionsCount = document.getElementById('custom-instructions-count');
+    customInstructionsInput.addEventListener('input', () => {
+        customInstructionsCount.textContent = customInstructionsInput.value.length;
+    });
 }
 
 // Check if API key is configured
@@ -321,6 +328,9 @@ async function convertDocuments() {
     const marginVertical = parseFloat(document.getElementById('margin-vertical').value);
     const marginHorizontal = parseFloat(document.getElementById('margin-horizontal').value);
 
+    const customInstructions = document.getElementById('custom-instructions').value.trim();
+    const pageRange = document.getElementById('page-range').value.trim();
+
     const settings = {
         overrideFormatting: overrideFormatting,
         font: 'Arial',
@@ -335,7 +345,9 @@ async function convertDocuments() {
         enableLogging: localStorage.getItem('enableLogging') === 'true',
         addPageMarkers: document.getElementById('page-markers').checked,
         replaceSignatures: document.getElementById('replace-signatures').checked,
-        preserveTableFormatting: document.getElementById('preserve-tables').checked
+        preserveTableFormatting: document.getElementById('preserve-tables').checked,
+        customInstructions: customInstructions || '',
+        pageRange: pageRange || ''
     };
 
     console.log('Converting files with settings:', settings);
