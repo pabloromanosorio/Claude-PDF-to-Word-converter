@@ -233,13 +233,71 @@
                         </label>
                     </div>
 
+                    <!-- Instruction Templates -->
+                    <div class="mt-5">
+                        <label class="block text-sm font-medium text-gray-700 mb-3">
+                            Document Type Templates (Optional)
+                        </label>
+                        <div class="space-y-2">
+                            <label class="flex items-start p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border border-gray-200 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                                <input type="radio" name="instruction-template" value="" checked class="mt-1 mr-3">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">None</div>
+                                    <div class="text-xs text-gray-500">Use custom instructions only</div>
+                                </div>
+                            </label>
+                            <label class="flex items-start p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border border-gray-200 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                                <input type="radio" name="instruction-template" value="academic" class="mt-1 mr-3">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">Academic/Transcript</div>
+                                    <div class="text-xs text-gray-500">Accuracy critical - exact table structure preserved</div>
+                                </div>
+                            </label>
+                            <label class="flex items-start p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border border-gray-200 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                                <input type="radio" name="instruction-template" value="legal" class="mt-1 mr-3">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">Legal Document</div>
+                                    <div class="text-xs text-gray-500">Maintain exact formatting and clause numbering</div>
+                                </div>
+                            </label>
+                            <label class="flex items-start p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border border-gray-200 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                                <input type="radio" name="instruction-template" value="multilingual" class="mt-1 mr-3">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">Multi-Language</div>
+                                    <div class="text-xs text-gray-500">Preserve special characters and accents</div>
+                                </div>
+                            </label>
+                            <label class="flex items-start p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border border-gray-200 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                                <input type="radio" name="instruction-template" value="tables" class="mt-1 mr-3">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">Complex Tables</div>
+                                    <div class="text-xs text-gray-500">Multi-level tables with cell merging</div>
+                                </div>
+                            </label>
+                            <label class="flex items-start p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border border-gray-200 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                                <input type="radio" name="instruction-template" value="scanned" class="mt-1 mr-3">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">Scanned Document</div>
+                                    <div class="text-xs text-gray-500">Extract text carefully, flag unclear sections</div>
+                                </div>
+                            </label>
+                            <label class="flex items-start p-3 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors border border-gray-200 has-[:checked]:border-blue-500 has-[:checked]:bg-blue-50">
+                                <input type="radio" name="instruction-template" value="forms" class="mt-1 mr-3">
+                                <div>
+                                    <div class="text-sm font-medium text-gray-900">Forms</div>
+                                    <div class="text-xs text-gray-500">Preserve form fields and checkbox structures</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
                     <!-- Custom Instructions -->
                     <div class="mt-5">
                         <label class="block text-sm font-medium text-gray-700 mb-2">
-                            Custom Instructions (Optional)
+                            Additional Custom Instructions
                         </label>
                         <textarea id="custom-instructions"
-                                  placeholder="Add any specific instructions for the conversion (e.g., 'Keep footnotes at bottom of each page', 'Convert currency symbols to text', etc.)"
+                                  placeholder="Add any additional specific instructions..."
                                   class="w-full input-modern rounded-lg px-4 py-3 text-sm resize-none focus:outline-none"
                                   rows="3"
                                   maxlength="5000"></textarea>

@@ -88,6 +88,22 @@ function setupEventListeners() {
     customInstructionsInput.addEventListener('input', () => {
         customInstructionsCount.textContent = customInstructionsInput.value.length;
     });
+
+    // Template selection - only show description, don't auto-fill
+    // Templates will be applied during conversion based on selection
+}
+
+// Get instruction template text based on selection
+function getTemplateInstructions(templateValue) {
+    const templates = {
+        'academic': 'This is an academic transcript - accuracy is critical. Preserve exact table structure and all numerical values.',
+        'legal': 'This is a legal contract. Maintain exact formatting and preserve all clause numbering.',
+        'multilingual': 'This document contains multiple languages. Preserve all special characters and accents.',
+        'tables': 'This document has complex multi-level tables. Preserve all cell merging and nested structures.',
+        'scanned': 'This is a scanned document. Extract text carefully and flag any unclear sections.',
+        'forms': 'This is a fillable form. Preserve all form fields and checkbox structures.'
+    };
+    return templates[templateValue] || '';
 }
 
 // Check if API key is configured
@@ -127,7 +143,8 @@ async function saveApiKey() {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to save API key');
+            const errorData = await response.json();
+            throw new Error(errorData.details || errorData.error || 'Failed to save API key');
         }
 
         document.getElementById('api-key-setup').classList.add('hidden');
@@ -139,7 +156,7 @@ async function saveApiKey() {
             document.getElementById('api-key-success').classList.add('hidden');
         }, 3000);
     } catch (error) {
-        errorEl.textContent = 'Error: ' + error.message;
+        errorEl.textContent = error.message;
         errorEl.classList.remove('hidden');
     } finally {
         btn.disabled = false;
@@ -331,22 +348,31 @@ async function convertDocuments() {
     const customInstructions = document.getElementById('custom-instructions').value.trim();
     const pageRange = document.getElementById('page-range').value.trim();
 
+    // Get selected template
+    const selectedTemplate = document.querySelector('input[name="instruction-template"]:checked').value;
+    const templateText = getTemplateInstructions(selectedTemplate);
+
+    // Combine template and custom instructions
+    const combinedInstructions = templateText
+        ? (customInstructions ? `${templateText} ${customInstructions}` : templateText)
+        : customInstructions;
+
     const settings = {
         overrideFormatting: overrideFormatting,
         font: 'Arial',
         fontSize: 12,
-        margins: {
+        margins: overrideFormatting ? {  // Only include margins if override is enabled
             top: marginVertical * 1440,
             bottom: marginVertical * 1440,
             left: marginHorizontal * 1440,
             right: marginHorizontal * 1440
-        },
+        } : {},
         model: document.querySelector('input[name="model"]:checked').value,
         enableLogging: localStorage.getItem('enableLogging') === 'true',
         addPageMarkers: document.getElementById('page-markers').checked,
         replaceSignatures: document.getElementById('replace-signatures').checked,
         preserveTableFormatting: document.getElementById('preserve-tables').checked,
-        customInstructions: customInstructions || '',
+        customInstructions: combinedInstructions || '',
         pageRange: pageRange || ''
     };
 
