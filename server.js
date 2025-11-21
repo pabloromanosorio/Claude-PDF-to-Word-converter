@@ -53,6 +53,9 @@ app.post('/api/convert', upload.single('pdf'), async (req, res) => {
       settings = validateSettings(settings);
     }
 
+    // Add file MIME type to settings for conversion logic
+    settings.mimeType = req.file.mimetype;
+
     // Create job
     const job = jobManager.createJob(
       req.file.originalname,
