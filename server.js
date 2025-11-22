@@ -144,8 +144,34 @@ app.post('/api/api-key', express.json(), (req, res) => {
   try {
     const { api_key } = req.body;
 
-    if (!api_key || !api_key.startsWith('sk-ant-')) {
-      return res.status(400).json({ error: 'Invalid API key format' });
+    // Validate API key format
+    if (!api_key || typeof api_key !== 'string') {
+      return res.status(400).json({
+        error: 'API key is required',
+        details: 'Please provide a valid Anthropic API key'
+      });
+    }
+
+    if (!api_key.startsWith('sk-ant-')) {
+      return res.status(400).json({
+        error: 'Invalid API key format',
+        details: 'Anthropic API keys start with "sk-ant-"'
+      });
+    }
+
+    if (api_key.length < 50) {
+      return res.status(400).json({
+        error: 'API key too short',
+        details: 'Valid Anthropic API keys are typically 100+ characters long'
+      });
+    }
+
+    // Validate it's not a placeholder
+    if (api_key.includes('your-key') || api_key.includes('xxx') || api_key.length < 100) {
+      return res.status(400).json({
+        error: 'Invalid API key',
+        details: 'Please use a real API key from https://console.anthropic.com/settings/keys'
+      });
     }
 
     // Update .env file
@@ -160,7 +186,7 @@ app.post('/api/api-key', express.json(), (req, res) => {
     // Update or add ANTHROPIC_API_KEY
     if (envContent.includes('ANTHROPIC_API_KEY=')) {
       envContent = envContent.replace(
-        /ANTHROPIC_API_KEY=.*/,
+        /ANTHROPIC_API_KEY=.*/g,
         `ANTHROPIC_API_KEY=${api_key}`
       );
     } else {
@@ -172,9 +198,19 @@ app.post('/api/api-key', express.json(), (req, res) => {
     // Update process.env
     process.env.ANTHROPIC_API_KEY = api_key;
 
-    res.json({ success: true, message: 'API key saved' });
+    console.log(`✓ API key saved (${api_key.length} characters)`);
+
+    res.json({
+      success: true,
+      message: 'API key saved successfully',
+      key_length: api_key.length
+    });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error('Failed to save API key:', error);
+    res.status(500).json({
+      error: 'Failed to save API key',
+      details: error.message
+    });
   }
 });
 

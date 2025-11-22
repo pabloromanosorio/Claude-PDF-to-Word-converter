@@ -51,5 +51,6 @@ temp_skill/
 # Application data
 .env
 data/
+output/
 build_env/
 .worktrees/
