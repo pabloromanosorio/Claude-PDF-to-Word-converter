@@ -1,0 +1,94 @@
+# Simple User Guide: PDF to Word Converter
+
+Welcome! This tool helps you convert PDF files into editable Word documents (DOCX) using advanced AI. It preserves formatting, tables, and text better than standard converters.
+
+---
+
+## 🚀 How to Start the App
+
+## 🚀 How to Start the App
+
+### For Mac Users
+**What opens this?** The built-in **Terminal** app (it's on every Mac).
+
+1.  Look for the file named **`start_app.command`**.
+2.  **Double-click** it.
+3.  **If it opens:** Great! A black window will appear. Wait for the browser.
+4.  **If it says "Unidentified Developer" or "Cannot be opened":**
+    *   **Don't panic!** This is normal for apps not from the App Store.
+    *   **Right-Click** (or Control-Click) the file.
+    *   Select **Open** from the menu.
+    *   Click **Open** in the pop-up box.
+5.  **If it says "You do not have appropriate access privileges":**
+    *   Open the "Terminal" app (Command+Space, type "Terminal").
+    *   Type `chmod +x ` (with a space at the end).
+    *   Drag and drop the `start_app.command` file into the Terminal window.
+    *   Press **Enter**.
+    *   Now try double-clicking the file again.
+
+### For Windows Users
+**What opens this?** The built-in **Command Prompt** (it's on every PC).
+
+1.  Look for the file named **`install_and_run.bat`**.
+2.  **Double-click** it.
+3.  A black window will appear. **Do not close this window.**
+4.  Your web browser will open automatically.
+5.  **If Windows says "Windows protected your PC":**
+    *   Click **"More info"**.
+    *   Click **"Run anyway"**.
+
+---
+
+## ⚙️ First Time Setup (One Time Only)
+
+To use the AI, you need an "API Key" from Anthropic (the makers of Claude).
+
+1.  **Get your Key**: Go to [https://console.anthropic.com/](https://console.anthropic.com/) and sign up.
+2.  **Create Key**: Look for "API Keys" and click "Create Key".
+3.  **Copy Key**: Copy the long text that starts with `sk-ant-...`.
+4.  **Enter in App**:
+    *   In the PDF Converter app (in your browser), click the **Settings** icon (⚙️) or look for the "API Key" button.
+    *   Paste your key into the box.
+    *   Click **Save**.
+
+You only need to do this once! The app will remember your key.
+
+---
+
+## 📝 How to Convert a PDF
+
+1.  **Select File**: Click the big **"Select PDF"** area (or drag and drop your file there).
+2.  **Choose Model** (Optional):
+    *   **Haiku**: Faster and cheaper. Good for simple documents.
+    *   **Sonnet**: Smarter and better quality. Best for complex layouts, handwriting, or tables.
+3.  **Convert**: Click the **"Convert to Word"** button.
+4.  **Wait**: You will see a progress bar. The AI is reading and rewriting your document.
+    *   *Note: Large files may take 1-2 minutes.*
+5.  **Download**: Once finished, a **"Download DOCX"** button will appear. Click it to save your Word file!
+
+---
+
+## ❓ Troubleshooting
+
+### The browser didn't open?
+If the black window is running but no website appeared:
+1.  Open your browser (Chrome, Safari, Firefox).
+2.  Type `http://localhost:3000` in the address bar and press Enter.
+
+### "Invalid API Key" error?
+*   Check that you copied the entire key (it should start with `sk-ant-`).
+*   Make sure you have "credits" in your Anthropic account. New accounts usually get some free credits, but you may need to add a payment method eventually.
+
+### Conversion failed?
+*   **Try a different model**: If you used Haiku, try Sonnet.
+*   **Check the black window**: It often shows error messages that can help explain what went wrong.
+*   **File too big?**: Extremely large PDFs (over 50MB) might be too much. Try splitting the PDF if possible.
+
+### How to close the app?
+1.  Close the browser tab.
+2.  Go to the black Terminal window and press any key, or just close the window.
+
+---
+
+## 📧 Need Help?
+If you are stuck, ask the person who shared this folder with you. They can check the `DEBUGGING.md` file for technical details.

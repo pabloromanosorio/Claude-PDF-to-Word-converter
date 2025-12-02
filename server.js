@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const path = require('path');
-const open = require('open');
+// const open = require('open'); // Moved to dynamic import
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -234,15 +234,20 @@ app.get('/api/stats', (req, res) => {
 // Start server
 app.listen(PORT, async () => {
   const url = `http://localhost:${PORT}`;
-  console.log(`✓ Server running at ${url}`);
-  console.log(`✓ Frontend available at ${url}`);
+  console.log('\n==================================================');
+  console.log(`🚀 Server running at ${url}`);
+  console.log('==================================================');
+  console.log('👉 If the browser does not open automatically,');
+  console.log(`👉 please copy and paste this URL into your browser:`);
+  console.log(`\n   ${url}\n`);
+  console.log('==================================================\n');
 
   // Auto-open browser
   try {
+    const open = (await import('open')).default;
     await open(url);
-    console.log('✓ Browser opened');
+    console.log('✓ Attempted to open browser');
   } catch (error) {
     console.log('× Could not open browser automatically');
-    console.log(`  Please open: ${url}`);
   }
 });

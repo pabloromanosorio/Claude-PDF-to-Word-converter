@@ -6,11 +6,14 @@
  * - Individual progress tracking
  * - Separate downloads
  * - No prompt contradiction
+ * - Internationalization (i18n)
+ * - Real-time logs
  */
 
 // State
 let selectedFiles = [];
 let jobs = {}; // Map of job_id -> job data
+let currentLang = localStorage.getItem('language') || 'en';
 
 // API base URL
 const API_BASE = window.location.origin;
@@ -18,15 +21,48 @@ const API_BASE = window.location.origin;
 // Initialize app
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('PDF to Word Converter v2.0 (Multi-file) initializing...');
+
+    // Set initial language
+    const langSelect = document.getElementById('language-select');
+    if (langSelect) {
+        langSelect.value = currentLang;
+        updateLanguage(currentLang);
+    }
+
     setupEventListeners();
     await checkApiKeyStatus();
     await loadUsageStats();
 });
 
+// Update UI language
+function updateLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('language', lang);
+
+    // Update all elements with data-i18n attribute
+    document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        if (translations[lang] && translations[lang][key]) {
+            element.textContent = translations[lang][key];
+        }
+    });
+
+    // Update placeholders
+    const customInstructions = document.getElementById('custom-instructions');
+    if (customInstructions && translations[lang].customInstructionsPlaceholder) {
+        customInstructions.placeholder = translations[lang].customInstructionsPlaceholder;
+    }
+}
+
 // Setup all event listeners
 function setupEventListeners() {
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
+
+    // Language selector
+    document.getElementById('language-select').addEventListener('change', (e) => {
+        updateLanguage(e.target.value);
+    });
 
     // File upload - MULTIPLE FILES
     dropZone.addEventListener('click', () => fileInput.click());
@@ -59,6 +95,9 @@ function setupEventListeners() {
         document.getElementById('error-section').classList.add('hidden');
     });
 
+    // Logs toggle
+    document.getElementById('toggle-logs-btn').addEventListener('click', toggleLogs);
+
     // API key
     document.getElementById('settings-btn').addEventListener('click', showApiKeySettings);
     document.getElementById('close-api-key-btn').addEventListener('click', hideApiKeySettings);
@@ -77,7 +116,7 @@ function setupEventListeners() {
 
     // Re-estimate cost when model changes
     document.querySelectorAll('input[name="model"]').forEach(radio => {
-        radio.addEventListener('change', () => {
+        radio.addEventListener('change', (e) => {
             if (selectedFiles.length > 0) estimateCosts();
         });
     });
@@ -88,9 +127,21 @@ function setupEventListeners() {
     customInstructionsInput.addEventListener('input', () => {
         customInstructionsCount.textContent = customInstructionsInput.value.length;
     });
+}
 
-    // Template selection - only show description, don't auto-fill
-    // Templates will be applied during conversion based on selection
+// Toggle logs visibility
+function toggleLogs() {
+    const logsContainer = document.getElementById('logs-container');
+    const btn = document.getElementById('toggle-logs-btn');
+    const isHidden = logsContainer.classList.contains('hidden');
+
+    if (isHidden) {
+        logsContainer.classList.remove('hidden');
+        btn.innerHTML = `<span data-i18n="hideLogs">${translations[currentLang].hideLogs}</span> <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"></path></svg>`;
+    } else {
+        logsContainer.classList.add('hidden');
+        btn.innerHTML = `<span data-i18n="showLogs">${translations[currentLang].showLogs}</span> <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>`;
+    }
 }
 
 // Get instruction template text based on selection
@@ -160,7 +211,7 @@ async function saveApiKey() {
         errorEl.classList.remove('hidden');
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Save Key';
+        btn.textContent = translations[currentLang].saveKey;
     }
 }
 
@@ -214,7 +265,7 @@ async function testApiKey() {
         errorEl.classList.remove('hidden');
     } finally {
         btn.disabled = false;
-        btn.textContent = 'Test API Key';
+        btn.textContent = translations[currentLang].testKey;
     }
 }
 
@@ -323,8 +374,10 @@ async function estimateCosts() {
     const model = document.querySelector('input[name="model"]:checked').value;
 
     // Simplified cost estimation based on model
-    // Haiku: ~$0.08/file, Sonnet: ~$0.20/file (rough average for typical PDFs)
-    const costPerFile = model === 'claude-haiku-4-5-20251001' ? 0.08 : 0.20;
+    // Haiku: ~$0.08/file, Sonnet: ~$0.20/file, Opus: ~$0.40/file
+    let costPerFile = 0.08;
+    if (model === 'claude-sonnet-4-5-20250929') costPerFile = 0.20;
+    if (model === 'claude-opus-4-5-20251101') costPerFile = 0.40;
     const totalFiles = selectedFiles.length;
 
     // Display simplified estimates
@@ -372,6 +425,7 @@ async function convertDocuments() {
         addPageMarkers: document.getElementById('page-markers').checked,
         replaceSignatures: document.getElementById('replace-signatures').checked,
         preserveTableFormatting: document.getElementById('preserve-tables').checked,
+        recognizeHeadersFooters: document.getElementById('recognize-headers-footers').checked,
         customInstructions: combinedInstructions || '',
         pageRange: pageRange || ''
     };
@@ -383,9 +437,15 @@ async function convertDocuments() {
     document.getElementById('progress-container').classList.remove('hidden');
     document.getElementById('error-section').classList.add('hidden');
 
+    // Show general warning
+    document.getElementById('general-warning').classList.remove('hidden');
+
     // Create progress items for each file
     const progressList = document.getElementById('progress-list');
     progressList.innerHTML = '';
+
+    // Clear logs
+    document.getElementById('logs-container').textContent = '';
 
     try {
         // Convert each file individually
@@ -446,7 +506,7 @@ function createProgressItem(jobInfo) {
                 <p class="text-xs text-gray-600">${jobInfo.page_count} pages</p>
             </div>
             <div class="text-xs">
-                <span id="status-${jobInfo.job_id}" class="px-2 py-1 bg-gray-200 rounded-full">Queued</span>
+                <span id="status-${jobInfo.job_id}" class="px-2 py-1 bg-gray-200 rounded-full">${translations[currentLang].statusQueued}</span>
             </div>
         </div>
         <div class="mb-2">
@@ -486,7 +546,8 @@ function pollJobStatus(jobId) {
                 actual_cost: job.actualCost,
                 input_tokens: job.inputTokens,
                 output_tokens: job.outputTokens,
-                error_message: job.error
+                error_message: job.error,
+                logs: job.logs || []
             };
 
             handleJobUpdate(jobId, update);
@@ -519,8 +580,21 @@ function handleJobUpdate(jobId, update) {
     if (barEl) barEl.style.width = update.progress + '%';
 
     if (statusEl) {
-        statusEl.textContent = update.status.charAt(0).toUpperCase() + update.status.slice(1);
+        const statusKey = 'status' + update.status.charAt(0).toUpperCase() + update.status.slice(1);
+        statusEl.textContent = translations[currentLang][statusKey] || update.status;
         statusEl.className = 'px-2 py-1 rounded-full text-xs font-medium ' + getStatusClass(update.status);
+    }
+
+    // Update logs
+    if (update.logs && update.logs.length > 0) {
+        const logsContainer = document.getElementById('logs-container');
+        // Only append new logs (simple check)
+        const currentLogText = logsContainer.textContent;
+        const newLogs = update.logs.filter(log => !currentLogText.includes(log)).join('\n');
+        if (newLogs) {
+            logsContainer.textContent += (logsContainer.textContent ? '\n' : '') + newLogs;
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
     }
 
     if (update.status === 'completed' && resultEl) {
@@ -533,7 +607,7 @@ function handleJobUpdate(jobId, update) {
                 <div class="flex items-center justify-between mb-1">
                     <span class="text-xs text-green-700">Cost: $${(update.actual_cost || 0).toFixed(4)}</span>
                     <button onclick="downloadFile('${jobId}')" class="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700">
-                        Download Again
+                        ${translations[currentLang].downloadAgain}
                     </button>
                 </div>
                 <div class="text-xs text-green-600">
@@ -636,7 +710,7 @@ function checkAllJobsComplete() {
         btnDiv.className = 'mt-6 text-center';
         btnDiv.innerHTML = `
             <button id="start-new-btn" onclick="startNewConversion()" class="bg-purple-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-purple-700 shadow-lg transition-all transform hover:scale-105">
-                Start New Conversion
+                ${translations[currentLang].startNew}
             </button>
         `;
         container.appendChild(btnDiv);
@@ -657,6 +731,7 @@ window.startNewConversion = function () {
     document.getElementById('convert-btn').disabled = true;
     document.getElementById('cost-estimate').classList.add('hidden');
     document.getElementById('file-input').value = '';
+    document.getElementById('general-warning').classList.add('hidden');
 
     // Remove start new button
     const btn = document.getElementById('start-new-btn');
